@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+</head>
+<body>
+
+    <script>
+    //import { DragPlugin } from "phaser3-rex-plugins/plugins/drag-plugin.js";
+
+    var config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        physics: {
+            default: 'arcade',
+            arcade: {
+                gravity: { y: 200 }
+            }
+        },
+        // plugins:{
+        //     global:[
+        //         {
+        //             key:'redDrag',
+        //             plugin:DragPlugin,
+        //             start:true
+        //         }
+        //     ]
+        // },
+        scene: {
+            preload: preload,
+            create: create,
+            update: update,
+            render: render,
+        }
+    };
+
+    var pipes = null; 
+    var game = new Phaser.Game(config);
+    
+    
+    function preload ()
+    {
+        //plugin load
+        //scene.load.plugin('rexdragplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexdragplugin.min.js', true);
+
+        //assets load
+        this.load.setBaseURL('http://localhost:8080');
+        this.load.image('back','assets/backimage.jpeg');
+        this.load.image('pipe','assets/pipe.png');
+
+    }
+
+    var platforms;
+    var logo;
+    var graphicses = [];
+    var lines = [];
+    
+    function create ()
+    {
+        var graphics;
+        var scene = this;
+        this.add.image(400, 375, 'back');
+        var line = null;
+        //line.setDepth(1);
+        var is_pointerdown = false;
+
+        this.input.on('pointerdown',function (pointer,dragX,dragY) {
+            console.log('dragstart++');
+            is_pointerdown = true;
+            graphics = scene.add.graphics();
+            graphics.depth = 1;
+            //lines.push(graphics);
+            line = new Phaser.Geom.Line();
+            line.setTo(pointer.x,pointer.y,pointer.x,pointer.y);
+            lines.push(line);
+
+            graphics.clear();
+            graphics.lineStyle(4,0xaa00aa);
+            graphics.strokeLineShape(line);
+        });
+
+        this.input.on('pointermove',function (pointer,dragX,dragY) {
+            if (is_pointerdown) {
+                console.log('move');
+                line.x2 = pointer.x;
+                line.y2 = pointer.y;
+
+                graphics.clear();
+                graphics.lineStyle(4,0xaa00aa);
+                graphics.strokeLineShape(line);
+            }
+        });
+
+        this.input.on('pointerup',function (pointer,dragX,dragY) {
+            is_pointerdown = false;
+        })
+
+        
+
+        //var img = this.add.image(0,0,'pipe');
+        // this.add.line(100,0,100,0,400,400,0xff0000,1);
+        
+        // img.setInteractive({draggable:true});
+        // img.on('dragstart',function (pointer,dragX,dragY) {
+        //     console.log('dragstart');
+        //     line = new Phaser.Geom.Line(pointer.downX,pointer.downY,pointer.downX+dragX,pointer.downY+dragY);
+        //     graphics.lineStyle(1,0x00ff00);
+        //     graphics.strokeLineShape(line);
+        // });
+        // var scene = this;
+        // img.on('drag',function (pointer,dragX,dragY) {
+        //     console.log('drag');
+        //     //line?.destroy();
+        //     //line = scene.add.line(pointer.downX+dragX,pointer.downY+dragY,pointer.downX,pointer.downY,0,100,0xff0000);
+        //     //line = new Phaser.Geom.Line(pointer.downX+dragX,pointer.downY+dragY,pointer.downX,pointer.downY);
+        //     line.x2 = pointer.downX+dragX;
+        //     line.y2 = pointer.downY+dragY;
+
+        // });
+        // img.on('dragend',function (pointer,dragX,dragY,dropped) {
+        //     console.log('dragend');
+        // });
+    
+        // var particles = this.add.particles('red');
+
+        // var emitter = particles.createEmitter({
+        //     speed: 100,
+        //     scale: { start: 1, end: 0 },
+        //     blendMode: 'ADD'
+        // });
+
+        // logo = this.physics.add.image(400, 100, 'logo');
+
+        // logo.setVelocity(100, 200);
+        // logo.setBounce(1, 0.5);
+        // logo.setCollideWorldBounds(true);
+
+        // emitter.startFollow(logo);
+
+        // platforms = this.physics.add.staticGroup();
+        // platforms.create(600,500,'logo').setScale(0.5).refreshBody();
+        
+        // this.physics.add.collider(logo,platforms);
+    }
+
+    function update() {
+        
+        // var cursor = this.input.keyboard.createCursorKeys();
+
+        // if (cursor.up.isDown) {
+        //     logo.setVelocityY(-200)
+        // }
+        // if (line =! null) {
+        //     graphics.strokeLineShape(line);
+        // }
+
+
+    }
+    function render() {
+        // game.debug.geom(line)
+        // game.debug.lineinfo(line,32,32);
+
+        // game.debug.text("Drag the handles",32,300);
+    }
+    </script>
+
+</body>
+</html>
