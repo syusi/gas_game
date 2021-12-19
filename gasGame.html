@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script> -->
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.51.0/dist/phaser.js"></script>
 </head>
 <body>
 
@@ -13,9 +14,14 @@
         width: 800,
         height: 600,
         physics: {
-            default: 'arcade',
+            //arcade　軽い代わりに直線判定等の機能が制限されている見たい？
+            default: 'matter',
             arcade: {
-                gravity: { y: 200 }
+                gravity: { y: 0 },
+                debug:true
+            },
+            matter :{
+                debug:true
             }
         },
         // plugins:{
@@ -48,53 +54,165 @@
         this.load.setBaseURL('http://localhost:8080');
         this.load.image('back','assets/backimage.jpeg');
         this.load.image('pipe','assets/pipe.png');
-
+        this.load.image('curve_pipe','assets/pipe2_curve.png');
+        this.load.image('gastank','assets/gas_tank.png');
+        this.load.image('house','assets/building_house1.png');
+        this.load.image('sora','assets/sora.png');
+        this.load.image('saisei','assets/saisei.png');
+        this.load.image('gasball','assets/gasball.png');
     }
 
     var platforms;
     var logo;
-    var graphicses = [];
     var lines = [];
+    var points = [];
+    var gasballs = [];
     
     function create ()
     {
-        var graphics;
+        //init game field
         var scene = this;
-        this.add.image(400, 375, 'back');
+        var splite = this.add.image(400,0,'sora');
+        splite.setScale(2);
+        var field = this.add.image(400, 375, 'back').setInteractive();
+        splite = this.add.image(75,75,'house');
+        splite.setScale(0.3);
+        splite = this.add.image(750,75,'gastank');
+        splite.setScale(0.3);
+        splite = this.add.image(175,150,'curve_pipe');
+        splite.setScale(0.2);
+        splite.angle += 180;
+        splite = this.add.image(650,150,'curve_pipe');
+        splite.setScale(0.2);
+        splite.angle += 90;
         var line = null;
-        //line.setDepth(1);
         var is_pointerdown = false;
 
-        this.input.on('pointerdown',function (pointer,dragX,dragY) {
+        //物理計算関係
+        this.matter.world.setBounds().disableGravity();
+
+        splite = this.add.image(750,100,'saisei').setInteractive();
+        splite.setScale(0.2);
+
+        splite.on('pointerdown',function (pointer) {
+
+            for (let i = 0; i < 64; i++) {
+                var ball_img = scene.add.image(650,150,'gasball');
+                var new_ball = scene.matter.add.gameObject(ball_img);
+                
+                //physicsだったころの名残
+                //new_ball.setCollideWorldBounds(true);
+                //new_ball.setCircle(5);
+                //摩擦
+                new_ball.setFriction(0,0,0);
+                new_ball.setBounce(1);
+                new_ball.setVelocity(Phaser.Math.Between(-5,5),Phaser.Math.Between(5,10));
+                // pytsicsだったころの名残
+                // for (const ball of gasballs) {
+                //     scene.physics.add.collider(ball,new_ball);
+                // }
+                // scene.physics.add.collider(new_ball,zones);
+                //scene.physics.add.collider(new_ball,testline);
+                gasballs.push(new_ball);
+            }
+            
+        });
+
+        //init pointer
+        var graphics = scene.add.graphics();
+        var point = new Phaser.Geom.Circle(630,180,20);
+        points.push(point);
+        graphics.fillStyle(0xFF0000,0.5);
+        graphics.fillCircleShape(point);
+        point = new Phaser.Geom.Circle(200,180,20);
+        points.push(point);
+        graphics.fillCircleShape(point);
+
+        //test line
+        var testline = this.add.line(0,0,100,100,200,200,0xff0000);
+        testline.setDepth(2);
+
+        //poligon test
+        var polygon = new Phaser.Geom.Polygon([400, 100, 200, 278, 340, 430, 650, 80]);
+        graphics.lineStyle(10,0x00aa00);
+        graphics.beginPath();
+        graphics.moveTo(polygon.points[0].x, polygon.points[0].y);
+        for (var i = 1; i < polygon.points.length; i++)
+        {
+            graphics.lineTo(polygon.points[i].x, polygon.points[i].y);
+        }
+        graphics.closePath();
+        graphics.strokePath();
+
+
+        this.matter.add.gameObject(polygon);
+        
+        // var zones = this.physics.add.staticGroup();
+        // zones.add(this.add.zone(400,300,200,5));
+        // //原点の位置が当たり判定になる。
+        // zones.add(testline);
+        // // zones.add(graphics);
+        // //zones.add(polygon);
+        // // var path = this.add.path(200,100);
+        // // path.lineTo(300,400);
+        // // zones.add(this.add.curve(100,200,path,0xff0000));
+
+        // pipepoints = [new Phaser.Math.Vector2(100,100),new Phaser.Math.Vector2(200,200)];
+        // var rope = this.add.rope(0,0,'pipe',null,pipepoints);
+        // zones.add(rope);
+
+        field.on('pointerdown',function (pointer,dragX,dragY) {
             console.log('dragstart++');
             is_pointerdown = true;
             graphics = scene.add.graphics();
             graphics.depth = 1;
             //lines.push(graphics);
+
             line = new Phaser.Geom.Line();
             line.setTo(pointer.x,pointer.y,pointer.x,pointer.y);
+            for (const point of points) {
+                if(checkPointer(point,pointer)){
+                    line.setTo(point.x,point.y,point.x,point.y);
+                    break;
+                }
+            }
             lines.push(line);
 
             graphics.clear();
-            graphics.lineStyle(4,0xaa00aa);
+            graphics.lineStyle(30,0xd3d3d3);
             graphics.strokeLineShape(line);
         });
 
-        this.input.on('pointermove',function (pointer,dragX,dragY) {
+        field.on('pointermove',function (pointer,dragX,dragY) {
             if (is_pointerdown) {
                 console.log('move');
                 line.x2 = pointer.x;
                 line.y2 = pointer.y;
 
                 graphics.clear();
-                graphics.lineStyle(4,0xaa00aa);
+                graphics.lineStyle(30,0xd3d3d3);
                 graphics.strokeLineShape(line);
             }
         });
 
-        this.input.on('pointerup',function (pointer,dragX,dragY) {
+        field.on('pointerup',function (pointer,dragX,dragY) {
             is_pointerdown = false;
-        })
+            for (const point of points) {
+                if(checkPointer(point,pointer)){
+                    line.x2 = point.x;
+                    line.y2 = point.y;
+
+                    graphics.clear();
+                    graphics.lineStyle(30,0xd3d3d3);
+                    graphics.strokeLineShape(line);
+                    return;
+                }
+            }
+            var point = new Phaser.Geom.Circle(pointer.x,pointer.y,20);
+            points.push(point);
+            graphics.fillStyle(0xFF0000,0.5);
+            graphics.fillCircleShape(point);
+        });
 
         
 
@@ -142,6 +260,11 @@
         // platforms.create(600,500,'logo').setScale(0.5).refreshBody();
         
         // this.physics.add.collider(logo,platforms);
+    }
+
+    function checkPointer(circle,point) {
+        console.log(Phaser.Geom.Circle.ContainsPoint(circle,point));
+        return Phaser.Geom.Circle.ContainsPoint(circle,point);
     }
 
     function update() {
