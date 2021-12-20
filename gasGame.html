@@ -21,7 +21,13 @@
                 debug:true
             },
             matter :{
-                debug:true
+                debug:true,
+                setBounds: {
+                    left: true,
+                    right:true,
+                    top:true,
+                    bottom:true
+                }
             }
         },
         // plugins:{
@@ -89,7 +95,7 @@
         var is_pointerdown = false;
 
         //物理計算関係
-        this.matter.world.setBounds().disableGravity();
+        this.matter.world.setBounds(1).disableGravity();
 
         splite = this.add.image(750,100,'saisei').setInteractive();
         splite.setScale(0.2);
@@ -97,15 +103,18 @@
         splite.on('pointerdown',function (pointer) {
 
             for (let i = 0; i < 64; i++) {
-                var ball_img = scene.add.image(650,150,'gasball');
-                var new_ball = scene.matter.add.gameObject(ball_img);
+                var new_ball = scene.matter.add.image(650,150,'gasball');
+                //var new_ball = scene.matter.add.gameObject(ball_img);
                 
+                //matterは別のエンジンらしい。そっち見たほうが早い。多分完全な反射をするのは無理そう。
                 //physicsだったころの名残
                 //new_ball.setCollideWorldBounds(true);
-                //new_ball.setCircle(5);
+                new_ball.setCircle(5);
                 //摩擦
                 new_ball.setFriction(0,0,0);
                 new_ball.setBounce(1);
+                scene.matter.body.setInertia(new_ball.body,Infinity);
+                scene.matter.body.setMass(new_ball.body,0.000000000001);
                 new_ball.setVelocity(Phaser.Math.Between(-5,5),Phaser.Math.Between(5,10));
                 // pytsicsだったころの名残
                 // for (const ball of gasballs) {
@@ -133,19 +142,20 @@
         testline.setDepth(2);
 
         //poligon test
-        var polygon = new Phaser.Geom.Polygon([400, 100, 200, 278, 340, 430, 650, 80]);
-        graphics.lineStyle(10,0x00aa00);
-        graphics.beginPath();
-        graphics.moveTo(polygon.points[0].x, polygon.points[0].y);
-        for (var i = 1; i < polygon.points.length; i++)
-        {
-            graphics.lineTo(polygon.points[i].x, polygon.points[i].y);
-        }
-        graphics.closePath();
-        graphics.strokePath();
+        //どうやらfigureは文字列型にしないといけないらしい。
+        var figure = '400 100 200 278 340 430 650 80';
+        var polygon = this.add.polygon(100,100,figure,0x0000ff,0.2);
+        // graphics.lineStyle(10,0x00aa00);
+        // graphics.beginPath();
+        // graphics.moveTo(polygon.points[0].x, polygon.points[0].y);
+        // for (var i = 1; i < polygon.points.length; i++)
+        // {
+        //     graphics.lineTo(polygon.points[i].x, polygon.points[i].y);
+        // }
+        // graphics.closePath();
+        // graphics.strokePath();
 
-
-        this.matter.add.gameObject(polygon);
+        this.matter.add.gameObject(polygon, { shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
         
         // var zones = this.physics.add.staticGroup();
         // zones.add(this.add.zone(400,300,200,5));
@@ -212,6 +222,11 @@
             points.push(point);
             graphics.fillStyle(0xFF0000,0.5);
             graphics.fillCircleShape(point);
+
+            //動的polygon生成
+            var figure = makeLinePolygon(line,1);
+            var polygon = scene.add.polygon((line.x1+line.x2)/2,(line.y1+line.y2)/2,figure,0x0000ff,0.2);
+            scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
         });
 
         
@@ -267,6 +282,15 @@
         return Phaser.Geom.Circle.ContainsPoint(circle,point);
     }
 
+    function makeLinePolygon(line,width) {
+        let polygon = [];
+        polygon.push({x:line.x1+width,y:line.y1});
+        polygon.push({x:line.x1-width,y:line.y1});
+        polygon.push({x:line.x2-width,y:line.y2});
+        polygon.push({x:line.x2+width,y:line.y2});
+        return polygon;
+    }
+
     function update() {
         
         // var cursor = this.input.keyboard.createCursorKeys();
@@ -286,6 +310,8 @@
 
         // game.debug.text("Drag the handles",32,300);
     }
+
+
     </script>
 
 </body>
