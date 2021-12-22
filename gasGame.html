@@ -43,7 +43,7 @@
             preload: preload,
             create: create,
             update: update,
-            render: render,
+            //render: render,
         }
     };
 
@@ -73,6 +73,9 @@
     var lines = [];
     var points = [];
     var gasballs = [];
+
+    var test_polygon=  null;
+    const pipe_width = 40;
     
     function create ()
     {
@@ -138,13 +141,13 @@
         graphics.fillCircleShape(point);
 
         //test line
-        var testline = this.add.line(0,0,100,100,200,200,0xff0000);
-        testline.setDepth(2);
+        //var testline = this.add.line(0,0,100,100,200,200,0xff0000);
+        //testline.setDepth(2);
 
         //poligon test
         //どうやらfigureは文字列型にしないといけないらしい。
-        var figure = '400 100 200 278 340 430 650 80';
-        var polygon = this.add.polygon(100,100,figure,0x0000ff,0.2);
+        //var figure = '400 200 200 278 340 430 550 80';
+        //var polygon = this.add.polygon(400,300,figure,0x0000ff,0.2);
         // graphics.lineStyle(10,0x00aa00);
         // graphics.beginPath();
         // graphics.moveTo(polygon.points[0].x, polygon.points[0].y);
@@ -155,7 +158,7 @@
         // graphics.closePath();
         // graphics.strokePath();
 
-        this.matter.add.gameObject(polygon, { shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
+        //this.matter.add.gameObject(polygon, { shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
         
         // var zones = this.physics.add.staticGroup();
         // zones.add(this.add.zone(400,300,200,5));
@@ -189,7 +192,7 @@
             lines.push(line);
 
             graphics.clear();
-            graphics.lineStyle(30,0xd3d3d3);
+            graphics.lineStyle(pipe_width,0xd3d3d3);
             graphics.strokeLineShape(line);
         });
 
@@ -200,7 +203,7 @@
                 line.y2 = pointer.y;
 
                 graphics.clear();
-                graphics.lineStyle(30,0xd3d3d3);
+                graphics.lineStyle(pipe_width,0xd3d3d3);
                 graphics.strokeLineShape(line);
             }
         });
@@ -213,7 +216,7 @@
                     line.y2 = point.y;
 
                     graphics.clear();
-                    graphics.lineStyle(30,0xd3d3d3);
+                    graphics.lineStyle(pipe_width,0xd3d3d3);
                     graphics.strokeLineShape(line);
                     return;
                 }
@@ -223,9 +226,31 @@
             graphics.fillStyle(0xFF0000,0.5);
             graphics.fillCircleShape(point);
 
-            //動的polygon生成
-            var figure = makeLinePolygon(line,1);
-            var polygon = scene.add.polygon((line.x1+line.x2)/2,(line.y1+line.y2)/2,figure,0x0000ff,0.2);
+            //角度の計算
+            //ragianなので注意。*180/3.14で角度に戻る。
+            var rad = Phaser.Geom.Line.Angle(line);
+            const {edge_x,edge_y} = calcLineEdges(rad,pipe_width-15);
+
+
+            //動的polygon生成 右
+            var figure = makeLinePolygon(line,3,3,0,0);
+            let x = ((line.x1+line.x2)/2)+edge_x;
+            let y = ((line.y1+line.y2)/2)+edge_y;
+            var polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
+            polygon.setDepth(3);
+            //polygon.setDisplayOrigin(0,0);
+            test_polygon = polygon;
+            scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
+
+
+            //動的polygon生成 ひだり
+            figure = makeLinePolygon(line,-3,-3,0,0);
+            x = ((line.x1+line.x2)/2)-edge_x;
+            y = ((line.y1+line.y2)/2)-edge_y;
+            polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
+            polygon.setDepth(3);
+            //polygon.setDisplayOrigin(0,0);
+            test_polygon = polygon;
             scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
         });
 
@@ -282,13 +307,21 @@
         return Phaser.Geom.Circle.ContainsPoint(circle,point);
     }
 
-    function makeLinePolygon(line,width) {
+    function makeLinePolygon(line,width,height,edge_x,edge_y) {
         let polygon = [];
-        polygon.push({x:line.x1+width,y:line.y1});
-        polygon.push({x:line.x1-width,y:line.y1});
-        polygon.push({x:line.x2-width,y:line.y2});
-        polygon.push({x:line.x2+width,y:line.y2});
+        polygon.push({x:line.x1+width+edge_x,y:line.y1-height+edge_y});
+        polygon.push({x:line.x1-width+edge_x,y:line.y1+height+edge_y});
+        polygon.push({x:line.x2-width+edge_x,y:line.y2+height+edge_y});
+        polygon.push({x:line.x2+width+edge_x,y:line.y2-height+edge_y});
         return polygon;
+    }
+
+    function calcLineEdges(line_rad,width){
+        //pi/2 = 90
+        let residue_rad = (3.14/2)-line_rad;
+        let x = width * Math.cos(residue_rad);
+        let y = width * Math.sin(residue_rad);
+        return {edge_x:x,edge_y:y};
     }
 
     function update() {

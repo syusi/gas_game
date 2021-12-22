@@ -61,6 +61,18 @@ function create ()
     poly.setBounce(1);
     poly.setFriction(0, 0, 0);
     poly.setFrictionAir(0.005);
+
+    var scene = this;
+    this.input.on('pointerdown',function (pointer) {
+        var poly = scene.add.polygon(pointer.x, pointer.y, arrow, 0x0000ff, 0.2);
+
+        scene.matter.add.gameObject(poly, { shape: { type: 'fromVerts', verts: arrow, flagInternal: true } });
+
+        poly.setVelocity(6, 3);
+        poly.setAngularVelocity(0.01);
+        poly.setBounce(1);
+        poly.setFriction(0, 0, 0);
+    });
 }
 </script>
 
