@@ -14,7 +14,7 @@
         width: 800,
         height: 600,
         physics: {
-            //arcade　軽い代わりに直線判定等の機能が制限されている見たい？
+            //arcade　軽い代わりに斜め直線判定等の機能が制限されている見たい？
             default: 'matter',
             arcade: {
                 gravity: { y: 0 },
@@ -230,6 +230,8 @@
             graphics.fillCircleShape(point);
 
             createPipeEdges(scene,line);
+
+            createArcPoligon(scene,{x:pointer.x,y:pointer.y},20,90,180);
         });
 
         
@@ -279,18 +281,37 @@
         
         // this.physics.add.collider(logo,platforms);
     }
+    function createStaticPolygon(scene,points,lines){
+        
+    }
 
     function checkPointer(circle,point) {
-        console.log(Phaser.Geom.Circle.ContainsPoint(circle,point));
+        //console.log(Phaser.Geom.Circle.ContainsPoint(circle,point));
         return Phaser.Geom.Circle.ContainsPoint(circle,point);
     }
 
-    function makeLinePolygon(line,width,height,edge_x,edge_y) {
+    function createArcPoligon(scene,point,radius,start_angle,end_angle){
+        let circle_points = [];
+        //角度
+        const divide_angle = 15;
+        const divide_rad = 15*3.14/180;
+        for(i=start_angle;i<=end_angle;i+=divide_angle){
+            let rad = i*3.14/180;
+            let x = radius * Math.cos(rad);
+            let y = -radius * Math.sin(rad);
+            let circle = scene.matter.add.circle(x+point.x,y+point.y,3,{isStatic:true});
+            circle_points.push({x:x,y:y});
+        }
+        return circle_points;
+    }
+
+
+    function makeLinePolygon(line,width,height) {
         let polygon = [];
-        polygon.push({x:line.x1+width+edge_x,y:line.y1-height+edge_y});
-        polygon.push({x:line.x1-width+edge_x,y:line.y1+height+edge_y});
-        polygon.push({x:line.x2-width+edge_x,y:line.y2+height+edge_y});
-        polygon.push({x:line.x2+width+edge_x,y:line.y2-height+edge_y});
+        polygon.push({x:line.x1+width,y:line.y1-height});
+        polygon.push({x:line.x1-width,y:line.y1+height});
+        polygon.push({x:line.x2-width,y:line.y2+height});
+        polygon.push({x:line.x2+width,y:line.y2-height});
         return polygon;
     }
 
@@ -306,13 +327,15 @@
         //角度の計算
         //ragianなので注意。*180/3.14で角度に戻る。
         var rad = Phaser.Geom.Line.Angle(line);
-        const {edge_x,edge_y} = calcLineEdges(rad,pipe_width-15);
-
+        const {edge_x,edge_y} = calcLineEdges(rad,pipe_width-20);
+        
+        const edges = calcLineEdges(rad,2);
+        const {coll_x,coll_y} = {coll_x:edges.edge_x,coll_y:edges.edge_y};
 
         //動的polygon生成 右
-        var figure = makeLinePolygon(line,3,3,0,0);
+        var figure = makeLinePolygon(line,coll_x,coll_y);
         let x = ((line.x1+line.x2)/2)+edge_x;
-        let y = ((line.y1+line.y2)/2)+edge_y;
+        let y = ((line.y1+line.y2)/2)-edge_y;
         var polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
         polygon.setDepth(3);
         //polygon.setDisplayOrigin(0,0);
@@ -321,9 +344,9 @@
 
 
         //動的polygon生成 ひだり
-        figure = makeLinePolygon(line,-3,-3,0,0);
+        figure = makeLinePolygon(line,-coll_x,-coll_y);
         x = ((line.x1+line.x2)/2)-edge_x;
-        y = ((line.y1+line.y2)/2)-edge_y;
+        y = ((line.y1+line.y2)/2)+edge_y;
         polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
         polygon.setDepth(3);
         //polygon.setDisplayOrigin(0,0);
