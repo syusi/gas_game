@@ -21,20 +21,10 @@ var config = {
             }
         }
     },
-    // plugins:{
-    //     global:[
-    //         {
-    //             key:'redDrag',
-    //             plugin:DragPlugin,
-    //             start:true
-    //         }
-    //     ]
-    // },
     scene: {
         preload: preload,
         create: create,
         update: update,
-        //render: render,
     }
 };
 
@@ -48,7 +38,6 @@ function preload ()
     //scene.load.plugin('rexdragplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexdragplugin.min.js', true);
 
     //assets load
-    //this.load.setBaseURL('http://localhost:8080');
     this.load.image('back','assets/backimage.jpeg');
     this.load.image('pipe','assets/pipe.png');
     this.load.image('curve_pipe','assets/pipe2_curve.png');
@@ -86,6 +75,8 @@ function create ()
     splite.setScale(0.2);
     splite.angle += 90;
     var line = null;
+    var start_point = null;
+
     var is_pointerdown = false;
 
     //物理計算関係
@@ -135,40 +126,6 @@ function create ()
     points.push(point);
     graphics.fillCircleShape(point);
 
-    //test line
-    //var testline = this.add.line(0,0,100,100,200,200,0xff0000);
-    //testline.setDepth(2);
-
-    //poligon test
-    //どうやらfigureは文字列型にしないといけないらしい。
-    //var figure = '400 200 200 278 340 430 550 80';
-    //var polygon = this.add.polygon(400,300,figure,0x0000ff,0.2);
-    // graphics.lineStyle(10,0x00aa00);
-    // graphics.beginPath();
-    // graphics.moveTo(polygon.points[0].x, polygon.points[0].y);
-    // for (var i = 1; i < polygon.points.length; i++)
-    // {
-    //     graphics.lineTo(polygon.points[i].x, polygon.points[i].y);
-    // }
-    // graphics.closePath();
-    // graphics.strokePath();
-
-    //this.matter.add.gameObject(polygon, { shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
-    
-    // var zones = this.physics.add.staticGroup();
-    // zones.add(this.add.zone(400,300,200,5));
-    // //原点の位置が当たり判定になる。
-    // zones.add(testline);
-    // // zones.add(graphics);
-    // //zones.add(polygon);
-    // // var path = this.add.path(200,100);
-    // // path.lineTo(300,400);
-    // // zones.add(this.add.curve(100,200,path,0xff0000));
-
-    // pipepoints = [new Phaser.Math.Vector2(100,100),new Phaser.Math.Vector2(200,200)];
-    // var rope = this.add.rope(0,0,'pipe',null,pipepoints);
-    // zones.add(rope);
-
     field.on('pointerdown',function (pointer,dragX,dragY) {
         console.log('dragstart++');
         is_pointerdown = true;
@@ -181,6 +138,7 @@ function create ()
         for (const point of points) {
             if(checkPointer(point,pointer)){
                 line.setTo(point.x,point.y,point.x,point.y);
+                start_point = point;
                 break;
             }
         }
@@ -205,6 +163,18 @@ function create ()
 
     field.on('pointerup',function (pointer,dragX,dragY) {
         is_pointerdown = false;
+
+        //スタート点の修正
+        if (start_point == null) {
+            start_point = addFulcrumPoint(graphics,line.x1,line.y1);
+            start_point.inLineRads = [];
+            points.push(start_point);
+        }
+
+        start_point.inLineRads.push(Phaser.Geom.Line.Angle(line)+3.14);
+        start_point = null;
+
+        //離した点の修正
         for (const point of points) {
             if(checkPointer(point,pointer)){
                 line.x2 = point.x;
@@ -221,6 +191,7 @@ function create ()
                 return;
             }
         }
+
         var point = new Phaser.Geom.Circle(pointer.x,pointer.y,20);
         //pointに入射角も入れる
         point.inLineRads = [];
@@ -230,58 +201,17 @@ function create ()
         graphics.fillStyle(0xFF0000,0.5);
         graphics.fillCircleShape(point);
 
-        //createPipeEdges(scene,line);
-
-        //createArcPoligon(scene,{x:pointer.x,y:pointer.y},20,90,180);
     });
-
-    
-
-    //var img = this.add.image(0,0,'pipe');
-    // this.add.line(100,0,100,0,400,400,0xff0000,1);
-    
-    // img.setInteractive({draggable:true});
-    // img.on('dragstart',function (pointer,dragX,dragY) {
-    //     console.log('dragstart');
-    //     line = new Phaser.Geom.Line(pointer.downX,pointer.downY,pointer.downX+dragX,pointer.downY+dragY);
-    //     graphics.lineStyle(1,0x00ff00);
-    //     graphics.strokeLineShape(line);
-    // });
-    // var scene = this;
-    // img.on('drag',function (pointer,dragX,dragY) {
-    //     console.log('drag');
-    //     //line?.destroy();
-    //     //line = scene.add.line(pointer.downX+dragX,pointer.downY+dragY,pointer.downX,pointer.downY,0,100,0xff0000);
-    //     //line = new Phaser.Geom.Line(pointer.downX+dragX,pointer.downY+dragY,pointer.downX,pointer.downY);
-    //     line.x2 = pointer.downX+dragX;
-    //     line.y2 = pointer.downY+dragY;
-
-    // });
-    // img.on('dragend',function (pointer,dragX,dragY,dropped) {
-    //     console.log('dragend');
-    // });
-
-    // var particles = this.add.particles('red');
-
-    // var emitter = particles.createEmitter({
-    //     speed: 100,
-    //     scale: { start: 1, end: 0 },
-    //     blendMode: 'ADD'
-    // });
-
-    // logo = this.physics.add.image(400, 100, 'logo');
-
-    // logo.setVelocity(100, 200);
-    // logo.setBounce(1, 0.5);
-    // logo.setCollideWorldBounds(true);
-
-    // emitter.startFollow(logo);
-
-    // platforms = this.physics.add.staticGroup();
-    // platforms.create(600,500,'logo').setScale(0.5).refreshBody();
-    
-    // this.physics.add.collider(logo,platforms);
 }
+function addFulcrumPoint(graphics,x,y) {
+    let point = new Phaser.Geom.Circle(x,y,20);
+
+    graphics.fillStyle(0xFF0000,0.5);
+    graphics.fillCircleShape(point);
+
+    return point
+}
+
 function createStaticPolygon(scene,points,lines){
     
     for(var line of lines){
