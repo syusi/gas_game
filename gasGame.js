@@ -89,8 +89,8 @@ function create ()
 
         createStaticPolygon(scene,points,lines);
 
-        for (let i = 0; i < 64; i++) {
-            var new_ball = scene.matter.add.image(650,150,'gasball');
+        for (let i = 0; i < 16; i++) {
+            var new_ball = scene.matter.add.image(630,180,'gasball');
             //var new_ball = scene.matter.add.gameObject(ball_img);
             
             //matterは別のエンジンらしい。そっち見たほうが早い。多分完全な反射をするのは無理そう。
@@ -116,15 +116,13 @@ function create ()
 
     //init pointer
     var graphics = scene.add.graphics();
-    var point = new Phaser.Geom.Circle(630,180,20);
-    point.inLineRads = [];
+
+    //gabana point
+    var point = addFulcrumPoint(graphics,630,180);
     points.push(point);
-    graphics.fillStyle(0xFF0000,0.5);
-    graphics.fillCircleShape(point);
-    point = new Phaser.Geom.Circle(200,180,20);
-    point.inLineRads = [];
+    //home point
+    point = addFulcrumPoint(graphics,200,180);
     points.push(point);
-    graphics.fillCircleShape(point);
 
     field.on('pointerdown',function (pointer,dragX,dragY) {
         console.log('dragstart++');
@@ -167,7 +165,6 @@ function create ()
         //スタート点の修正
         if (start_point == null) {
             start_point = addFulcrumPoint(graphics,line.x1,line.y1);
-            start_point.inLineRads = [];
             points.push(start_point);
         }
 
@@ -192,14 +189,10 @@ function create ()
             }
         }
 
-        var point = new Phaser.Geom.Circle(pointer.x,pointer.y,20);
-        //pointに入射角も入れる
-        point.inLineRads = [];
-        point.inLineRads.push(Phaser.Geom.Line.Angle(line));
-
+        var point = addFulcrumPoint(graphics,pointer.x,pointer.y);
         points.push(point);
-        graphics.fillStyle(0xFF0000,0.5);
-        graphics.fillCircleShape(point);
+        //pointに入射角も入れる
+        point.inLineRads.push(Phaser.Geom.Line.Angle(line));
 
     });
 }
@@ -208,6 +201,8 @@ function addFulcrumPoint(graphics,x,y) {
 
     graphics.fillStyle(0xFF0000,0.5);
     graphics.fillCircleShape(point);
+
+    point.inLineRads = [];
 
     return point
 }
@@ -260,7 +255,7 @@ function createArcPoligon(scene,point,radius,start_angle,end_angle){
     const divide_rad = 15*3.14/180;
     for(i=start_angle;i<=end_angle;i+=divide_angle){
         let rad = i*3.14/180;
-        let x = radius * Math.cos(rad);
+        let x = -radius * Math.cos(rad);
         let y = -radius * Math.sin(rad);
         let circle = scene.matter.add.circle(x+point.x,y+point.y,3,{isStatic:true});
         circle_points.push({x:x,y:y});
