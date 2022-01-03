@@ -96,13 +96,13 @@ function create ()
             //matterは別のエンジンらしい。そっち見たほうが早い。多分完全な反射をするのは無理そう。
             //physicsだったころの名残
             //new_ball.setCollideWorldBounds(true);
-            new_ball.setCircle(5);
+            new_ball.setCircle(4);
             //摩擦
             new_ball.setFriction(0,0,0);
             new_ball.setBounce(1);
             scene.matter.body.setInertia(new_ball.body,Infinity);
             scene.matter.body.setMass(new_ball.body,0.000000000001);
-            new_ball.setVelocity(Phaser.Math.Between(-5,5),Phaser.Math.Between(5,10));
+            new_ball.setVelocity(Phaser.Math.Between(-3,3),Phaser.Math.Between(3,5));
             // pytsicsだったころの名残
             // for (const ball of gasballs) {
             //     scene.physics.add.collider(ball,new_ball);
@@ -214,27 +214,54 @@ function createStaticPolygon(scene,points,lines){
     }
 
     for(var point of points){
-        const angle_gap = Array.from({ length: 360/15 }, () => 0);
+        const angle_devide_dig = Array.from( { length: 360/15}, (v,k) => k*15);
+        const angle_gap_index = Array.from({ length: 360/15 }, () => 0);
 
         for (const rad of point.inLineRads) {
             let angle_max = (rad+3.14/2)*180/3.14;
             let angle_min = (rad-3.14/2)*180/3.14;
+
+            let wall_angles = [];
+            if (angle_max > 360) {
+                wall_angles.push({max:angle_max-360,min:0});
+                angle_max = 360;
+            }
+            if(angle_min < 0){
+                wall_angles.push({max:360,min:angle_min+360});
+                angle_min = 0;
+            }
+            wall_angles.push({max:angle_max,min:angle_min});
+            //0~360で壁がない部分を切り出す
             
-            for (const index in angle_gap) {
-                if (angle_min < index*15 && index*15 < angle_max) {
-                    angle_gap[index]++;
+            
+            // 角度毎に切り出す
+            for (const wall_angle of wall_angles) {
+                const max_index = angle_devide_dig.map((v,k) => {return {v:Math.abs(v-wall_angle.max),k:k}}).sort((a,b)=> a.v-b.v)[0].k;
+                let max_angle_fix = angle_devide_dig[max_index];
+                const min_index = angle_devide_dig.map((v,k) => {return {v:Math.abs(v-wall_angle.min),k:k}}).sort((a,b)=> a.v-b.v)[0].k;
+                let min_angle_fix = angle_devide_dig[min_index];
+                
+                for (let angle = min_angle_fix; angle <= max_angle_fix; angle+=15) {
+                    angle_gap_index[angle/15]+=1;
                 }
             }
+            
+
+            // for (const index in angle_gap) {
+            //     if (angle_min < index*15 && index*15 < angle_max) {
+            //         angle_gap[index]++;
+            //     }
+            // }
         }
 
         let start_angle = undefined;
-        for (const index in angle_gap) {
+        for (const index in angle_gap_index) {
             
-            if (start_angle == undefined && angle_gap[index] < 1) {
+            if (start_angle == undefined && angle_gap_index[index] < 1) {
                 start_angle = index*15;
             }
             
-            if(start_angle!=undefined && (angle_gap[index] > 0 || parseInt(index)+1 == angle_gap.length)){
+            if(start_angle!=undefined && (angle_gap_index[index] > 0 || parseInt(index)+1 == angle_gap_index.length)){
                 let end_angle = index*15;
                 createArcPoligon(scene,point,20,start_angle,end_angle);
                 start_angle = undefined;
@@ -257,7 +284,7 @@ function createArcPoligon(scene,point,radius,start_angle,end_angle){
         let rad = i*3.14/180;
         let x = -radius * Math.cos(rad);
         let y = -radius * Math.sin(rad);
-        let circle = scene.matter.add.circle(x+point.x,y+point.y,3,{isStatic:true});
+        let circle = scene.matter.add.circle(x+point.x,y+point.y,5,{isStatic:true});
         circle_points.push({x:x,y:y});
     }
     return circle_points;
@@ -273,6 +300,7 @@ function makeLinePolygon(line,width,height) {
     return polygon;
 }
 
+// calc x,y pos distance in line of center
 function calcLineEdges(line_rad,width){
     //pi/2 = 90
     let residue_rad = (3.14/2)-line_rad;
@@ -282,12 +310,13 @@ function calcLineEdges(line_rad,width){
 }
 
 function createPipeEdges(scene,line) {
-    //角度の計算
-    //ragianなので注意。*180/3.14で角度に戻る。
+    //caliculation of angle 
+    //caution! ragian. angle = *180/3.14
     var rad = Phaser.Geom.Line.Angle(line);
     const {edge_x,edge_y} = calcLineEdges(rad,pipe_width-20);
     
-    const edges = calcLineEdges(rad,2);
+    // calc collision of line
+    const edges = calcLineEdges(rad,5);
     const {coll_x,coll_y} = {coll_x:edges.edge_x,coll_y:edges.edge_y};
 
     //動的polygon生成 右
