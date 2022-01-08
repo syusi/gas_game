@@ -56,6 +56,7 @@ var gasballs = [];
 
 var test_polygon=  null;
 const pipe_width = 40;
+const curve_divide_unit = 15;
 
 function create ()
 {
@@ -91,6 +92,7 @@ function create ()
 
         for (let i = 0; i < 16; i++) {
             var new_ball = scene.matter.add.image(630,180,'gasball');
+            new_ball.setDepth(5);
             //var new_ball = scene.matter.add.gameObject(ball_img);
             
             //matterは別のエンジンらしい。そっち見たほうが早い。多分完全な反射をするのは無理そう。
@@ -169,6 +171,7 @@ function create ()
         }
 
         start_point.inLineRads.push(Phaser.Geom.Line.Angle(line)+3.14);
+        start_point.connect_Line.push(line);
         start_point = null;
 
         //離した点の修正
@@ -182,6 +185,7 @@ function create ()
                 graphics.strokeLineShape(line);
 
                 point.inLineRads.push(Phaser.Geom.Line.Angle(line));
+                point.connect_Line.push(line);
 
                 //createPipeEdges(scene,line);
                 
@@ -193,6 +197,7 @@ function create ()
         points.push(point);
         //pointに入射角も入れる
         point.inLineRads.push(Phaser.Geom.Line.Angle(line));
+        point.connect_Line.push(line);
 
     });
 }
@@ -201,25 +206,32 @@ function addFulcrumPoint(graphics,x,y) {
 
     graphics.fillStyle(0xFF0000,0.5);
     graphics.fillCircleShape(point);
+    graphics.depth = 2;
 
     point.inLineRads = [];
+    point.connect_Line = [];
 
     return point
 }
 
 function createStaticPolygon(scene,points,lines){
-    
-    for(var line of lines){
-        createPipeEdges(scene,line);
+
+    for (const line of lines) {
+        calcPipeEdge(line);
     }
 
     for(var point of points){
-        const angle_devide_dig = Array.from( { length: 360/15}, (v,k) => k*15);
-        const angle_gap_index = Array.from({ length: 360/15 }, () => 0);
+        const angle_devide_dig = Array.from( { length: 360/curve_divide_unit}, (v,k) => k*curve_divide_unit);
+        const angle_gap_index = Array.from({ length: 360/curve_divide_unit }, () => 0);
 
         for (const rad of point.inLineRads) {
             let angle_max = (rad+3.14/2)*180/3.14;
             let angle_min = (rad-3.14/2)*180/3.14;
+
+            if( angle_max < 0 && angle_min < 0){
+                angle_max += 360;
+                angle_min += 360;
+            }
 
             let wall_angles = [];
             if (angle_max > 360) {
@@ -241,46 +253,91 @@ function createStaticPolygon(scene,points,lines){
                 const min_index = angle_devide_dig.map((v,k) => {return {v:Math.abs(v-wall_angle.min),k:k}}).sort((a,b)=> a.v-b.v)[0].k;
                 let min_angle_fix = angle_devide_dig[min_index];
                 
-                for (let angle = min_angle_fix; angle <= max_angle_fix; angle+=15) {
-                    angle_gap_index[angle/15]+=1;
+                for (let angle = min_angle_fix; angle <= max_angle_fix; angle+=curve_divide_unit) {
+                    angle_gap_index[angle/curve_divide_unit]+=1;
                 }
             }
             
-
-            // for (const index in angle_gap) {
-            //     if (angle_min < index*15 && index*15 < angle_max) {
-            //         angle_gap[index]++;
-            //     }
-            // }
         }
 
         let start_angle = undefined;
         for (const index in angle_gap_index) {
             
             if (start_angle == undefined && angle_gap_index[index] < 1) {
-                start_angle = index*15;
+                start_angle = index*curve_divide_unit;
             }
             
             if(start_angle!=undefined && (angle_gap_index[index] > 0 || parseInt(index)+1 == angle_gap_index.length)){
-                let end_angle = index*15;
+                let end_angle = index*curve_divide_unit;
                 createArcPoligon(scene,point,20,start_angle,end_angle);
                 start_angle = undefined;
             }
         }
+
+        pipeEdgeCut(point);
+    }
+
+    for(var line of lines){
+        createPipeEdges(scene,line);
     }
 }
 
+//check pointer in circle
 function checkPointer(circle,point) {
     //console.log(Phaser.Geom.Circle.ContainsPoint(circle,point));
     return Phaser.Geom.Circle.ContainsPoint(circle,point);
 }
 
+function pipeEdgeCut(point) {
+    
+    if (point.connect_Line.length < 2 ) {
+        return;
+    }
+
+    let edge_Lines = [];
+
+    for (const line of point.connect_Line) {
+        edge_Lines.push(line.leftEdge);
+        edge_Lines.push(line.rightEdge);
+    }
+
+    let temp_line = edge_Lines.shift();    
+    while (edge_Lines.length != 0) {
+        for (const line of edge_Lines) {
+            let result = calcLineCross(temp_line,line);
+            if(result == false){
+                continue;
+            }
+            let [x,y] = result;
+
+            let left = temp_line.x1 > temp_line.x2 ? temp_line.x1 : temp_line.x2;
+            let right = left == temp_line.x1 ? temp_line.x2 : temp_line.x1;
+            if (left > x && x > right) {
+                let replace_number = Math.abs(temp_line.x1 - x) > Math.abs(temp_line.x2 - x) ? '2' : '1';
+                temp_line['x'+replace_number] = x;
+                temp_line['y'+replace_number] = y;
+            }
+            left = line.x1 > line.x2 ? line.x1 : line.x2;
+            right = left == line.x1 ? line.x2 : line.x1;
+            if (left > x && x > right) {
+                replace_number = Math.abs(line.x1 - x) > Math.abs(line.x2 - x) ? '2' : '1';
+                line['x'+replace_number] = x;
+                line['y'+replace_number] = y;
+            }
+        }
+        temp_line = edge_Lines.shift();
+    }
+
+    
+}
+
+//create Arc Poligon
 function createArcPoligon(scene,point,radius,start_angle,end_angle){
     let circle_points = [];
     //角度
-    const divide_angle = 15;
-    const divide_rad = 15*3.14/180;
-    for(i=start_angle;i<=end_angle;i+=divide_angle){
+    const divide_rad = curve_divide_unit*3.14/180;
+    start_angle -= curve_divide_unit;
+    for(i=start_angle;i<=end_angle;i+=curve_divide_unit){
         let rad = i*3.14/180;
         let x = -radius * Math.cos(rad);
         let y = -radius * Math.sin(rad);
@@ -290,7 +347,7 @@ function createArcPoligon(scene,point,radius,start_angle,end_angle){
     return circle_points;
 }
 
-
+//create poligon figured line
 function makeLinePolygon(line,width,height) {
     let polygon = [];
     polygon.push({x:line.x1+width,y:line.y1-height});
@@ -306,39 +363,80 @@ function calcLineEdges(line_rad,width){
     let residue_rad = (3.14/2)-line_rad;
     let x = width * Math.cos(residue_rad);
     let y = width * Math.sin(residue_rad);
-    return {edge_x:x,edge_y:y};
+    return {x:x,y:y};
 }
 
-function createPipeEdges(scene,line) {
+function calcPipeEdge(line) {
     //caliculation of angle 
     //caution! ragian. angle = *180/3.14
     var rad = Phaser.Geom.Line.Angle(line);
-    const {edge_x,edge_y} = calcLineEdges(rad,pipe_width-20);
+    //中心からの距離を格納
+    line.edge_center_diff = calcLineEdges(rad,pipe_width-20);
     
     // calc collision of line
-    const edges = calcLineEdges(rad,5);
-    const {coll_x,coll_y} = {coll_x:edges.edge_x,coll_y:edges.edge_y};
+    line.edge_polygon_coll = calcLineEdges(rad,5);
 
-    //動的polygon生成 右
-    var figure = makeLinePolygon(line,coll_x,coll_y);
-    let x = ((line.x1+line.x2)/2)+edge_x;
-    let y = ((line.y1+line.y2)/2)-edge_y;
+    line.rightEdge = {
+        x1:line.x1+line.edge_center_diff.x,
+        y1:line.y1-line.edge_center_diff.y,
+        x2:line.x2+line.edge_center_diff.x,
+        y2:line.y2-line.edge_center_diff.y,
+    };
+
+    line.leftEdge = {
+        x1:line.x1-line.edge_center_diff.x,
+        y1:line.y1+line.edge_center_diff.y,
+        x2:line.x2-line.edge_center_diff.x,
+        y2:line.y2+line.edge_center_diff.y,
+    };
+}
+
+function createPipeEdges(scene,line) {
+    // //create pipe edges from 
+
+    //dynamic polygon create right
+    var figure = makeLinePolygon(line.rightEdge,line.edge_polygon_coll.x,line.edge_polygon_coll.y);
+    let x = ((line.x1+line.x2)/2)+line.edge_center_diff.x;
+    let y = ((line.y1+line.y2)/2)-line.edge_center_diff.y;
     var polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
     polygon.setDepth(3);
+    
     //polygon.setDisplayOrigin(0,0);
     test_polygon = polygon;
     scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
 
 
-    //動的polygon生成 ひだり
-    figure = makeLinePolygon(line,-coll_x,-coll_y);
-    x = ((line.x1+line.x2)/2)-edge_x;
-    y = ((line.y1+line.y2)/2)+edge_y;
+    //dynamic polygon create left
+    figure = makeLinePolygon(line.leftEdge,-line.edge_polygon_coll.x,-line.edge_polygon_coll.y);
+    x = ((line.x1+line.x2)/2)-line.edge_center_diff.x;
+    y = ((line.y1+line.y2)/2)+line.edge_center_diff.y;
     polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
     polygon.setDepth(3);
     //polygon.setDisplayOrigin(0,0);
     test_polygon = polygon;
     scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
+}
+
+function calcLineCross(line1,line2) {
+    
+    let [a1,b1] = calcExpressLine(line1);
+    let [a2,b2] = calcExpressLine(line2);
+
+    if(a1 == a2){
+        return false;
+    }
+
+    let x = (b2 - b1)/(a1 - a2);
+    let y = x * a1 + b1;
+
+    return [x,y];
+}
+function calcExpressLine(line) {
+    //y = ax+b
+    let a = (line.y1 - line.y2)/(line.x1 - line.x2);
+    let b = line.y1 - a*line.x1;
+
+    return [a,b];
 }
 
 function update() {
