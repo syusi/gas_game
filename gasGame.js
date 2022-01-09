@@ -75,7 +75,7 @@ function create ()
     splite = this.add.image(650,150,'curve_pipe');
     splite.setScale(0.2);
     splite.angle += 90;
-    var line = null;
+    var drowing_line = null;
     var start_point = null;
 
     var is_pointerdown = false;
@@ -133,74 +133,78 @@ function create ()
         graphics.depth = 1;
         //lines.push(graphics);
 
-        line = new Phaser.Geom.Line();
-        line.setTo(pointer.x,pointer.y,pointer.x,pointer.y);
+        drowing_line = new Phaser.Geom.Line();
+        drowing_line.setTo(pointer.x,pointer.y,pointer.x,pointer.y);
         for (const point of points) {
             if(checkPointer(point,pointer)){
-                line.setTo(point.x,point.y,point.x,point.y);
+                drowing_line.setTo(point.x,point.y,point.x,point.y);
                 start_point = point;
                 break;
             }
         }
-        lines.push(line);
+        lines.push(drowing_line);
 
         graphics.clear();
         graphics.lineStyle(pipe_width,0xd3d3d3);
-        graphics.strokeLineShape(line);
+        graphics.strokeLineShape(drowing_line);
     });
 
     field.on('pointermove',function (pointer,dragX,dragY) {
         if (is_pointerdown) {
             console.log('move');
-            line.x2 = pointer.x;
-            line.y2 = pointer.y;
+            drowing_line.x2 = pointer.x;
+            drowing_line.y2 = pointer.y;
 
             graphics.clear();
             graphics.lineStyle(pipe_width,0xd3d3d3);
-            graphics.strokeLineShape(line);
+            graphics.strokeLineShape(drowing_line);
         }
     });
 
     field.on('pointerup',function (pointer,dragX,dragY) {
         is_pointerdown = false;
-
-        //スタート点の修正
-        if (start_point == null) {
-            start_point = addFulcrumPoint(graphics,line.x1,line.y1);
-            points.push(start_point);
-        }
-
-        start_point.inLineRads.push(Phaser.Geom.Line.Angle(line)+3.14);
-        start_point.connect_Line.push(line);
-        start_point = null;
-
+    
+        let isPoint_in = false;
         //離した点の修正
         for (const point of points) {
             if(checkPointer(point,pointer)){
-                line.x2 = point.x;
-                line.y2 = point.y;
+                drowing_line.x2 = point.x;
+                drowing_line.y2 = point.y; 
 
-                graphics.clear();
-                graphics.lineStyle(pipe_width,0xd3d3d3);
-                graphics.strokeLineShape(line);
+                point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line));
+                point.connect_Line.push(drowing_line);
 
-                point.inLineRads.push(Phaser.Geom.Line.Angle(line));
-                point.connect_Line.push(line);
-
-                //createPipeEdges(scene,line);
-                
-                return;
+                isPoint_in = true;
+                break;
             }
         }
+        graphics.clear();
+        graphics.lineStyle(pipe_width,0xd3d3d3);
+        graphics.strokeLineShape(drowing_line);
 
-        var point = addFulcrumPoint(graphics,pointer.x,pointer.y);
-        points.push(point);
-        //pointに入射角も入れる
-        point.inLineRads.push(Phaser.Geom.Line.Angle(line));
-        point.connect_Line.push(line);
+        //createPipeEdges(scene,line);
 
+        //スタート点の修正
+        if (start_point == null) {
+            start_point = addFulcrumPoint(graphics,drowing_line.x1,drowing_line.y1);
+            points.push(start_point);
+        }
+
+        start_point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line)+3.14);
+        start_point.connect_Line.push(drowing_line);
+        start_point = null;
+
+        //ゴール点の描画
+        if (isPoint_in == false) {
+            var point = addFulcrumPoint(graphics,drowing_line.x2,drowing_line.y2);
+            points.push(point);
+            //pointに入射角も入れる
+            point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line));
+            point.connect_Line.push(drowing_line);    
+        }
     });
 }
+
 function addFulcrumPoint(graphics,x,y) {
     let point = new Phaser.Geom.Circle(x,y,20);
 
@@ -211,7 +215,7 @@ function addFulcrumPoint(graphics,x,y) {
     point.inLineRads = [];
     point.connect_Line = [];
 
-    return point
+    return point;
 }
 
 function createStaticPolygon(scene,points,lines){
@@ -269,7 +273,7 @@ function createStaticPolygon(scene,points,lines){
             
             if(start_angle!=undefined && (angle_gap_index[index] > 0 || parseInt(index)+1 == angle_gap_index.length)){
                 let end_angle = index*curve_divide_unit;
-                createArcPoligon(scene,point,20,start_angle,end_angle);
+                //createArcPoligon(scene,point,20,start_angle,end_angle);
                 start_angle = undefined;
             }
         }
@@ -314,6 +318,7 @@ function pipeEdgeCut(point) {
             let right = left == temp_line.x1 ? temp_line.x2 : temp_line.x1;
             if (left > x && x > right) {
                 let replace_number = Math.abs(temp_line.x1 - x) > Math.abs(temp_line.x2 - x) ? '2' : '1';
+                temp_line.cutdiff = {x:temp_line['x'+replace_number] - x,y:temp_line['y'+replace_number] - y};
                 temp_line['x'+replace_number] = x;
                 temp_line['y'+replace_number] = y;
             }
@@ -321,6 +326,7 @@ function pipeEdgeCut(point) {
             right = left == line.x1 ? line.x2 : line.x1;
             if (left > x && x > right) {
                 replace_number = Math.abs(line.x1 - x) > Math.abs(line.x2 - x) ? '2' : '1';
+                line.cutdiff = {x:line['x'+replace_number] - x,y:line['y'+replace_number] - y};
                 line['x'+replace_number] = x;
                 line['y'+replace_number] = y;
             }
@@ -398,6 +404,10 @@ function createPipeEdges(scene,line) {
     var figure = makeLinePolygon(line.rightEdge,line.edge_polygon_coll.x,line.edge_polygon_coll.y);
     let x = ((line.x1+line.x2)/2)+line.edge_center_diff.x;
     let y = ((line.y1+line.y2)/2)-line.edge_center_diff.y;
+    if (line.rightEdge.cutdiff != undefined) {
+        x -= line.rightEdge.cutdiff.x;
+        y -= line.rightEdge.cutdiff.y;
+    }
     var polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
     polygon.setDepth(3);
     
@@ -410,6 +420,10 @@ function createPipeEdges(scene,line) {
     figure = makeLinePolygon(line.leftEdge,-line.edge_polygon_coll.x,-line.edge_polygon_coll.y);
     x = ((line.x1+line.x2)/2)-line.edge_center_diff.x;
     y = ((line.y1+line.y2)/2)+line.edge_center_diff.y;
+    if (line.leftEdge.cutdiff != undefined) {
+        x -= line.leftEdge.cutdiff.x;
+        y -= line.leftEdge.cutdiff.y;
+    }
     polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
     polygon.setDepth(3);
     //polygon.setDisplayOrigin(0,0);
