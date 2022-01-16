@@ -273,7 +273,7 @@ function createStaticPolygon(scene,points,lines){
             
             if(start_angle!=undefined && (angle_gap_index[index] > 0 || parseInt(index)+1 == angle_gap_index.length)){
                 let end_angle = index*curve_divide_unit;
-                //createArcPoligon(scene,point,20,start_angle,end_angle);
+                createArcPoligon(scene,point,20,start_angle,end_angle);
                 start_angle = undefined;
             }
         }
@@ -331,15 +331,9 @@ function pipeEdgeCut(point) {
             }
             //is cross both of line
             if(is_line_cross && is_temp_cross){
-                let replace_number = Math.abs(temp_line.x1 - x) > Math.abs(temp_line.x2 - x) ? '2' : '1';
-                temp_line.cutdiff = {x: x - temp_line['x'+replace_number],y: y - temp_line['y'+replace_number]};
-                temp_line['x'+replace_number] = x;
-                temp_line['y'+replace_number] = y;
+                lineCutAndCorrection(temp_line,x,y);
 
-                replace_number = Math.abs(line.x1 - x) > Math.abs(line.x2 - x) ? '2' : '1';
-                line.cutdiff = {x:x - line['x'+replace_number],y:y - line['y'+replace_number]};
-                line['x'+replace_number] = x;
-                line['y'+replace_number] = y;
+                lineCutAndCorrection(line,x,y);
             }
 
             
@@ -348,6 +342,18 @@ function pipeEdgeCut(point) {
     }
 
     
+}
+
+function lineCutAndCorrection(line,x,y){
+    let replace_number = Math.abs(line.x1 - x) > Math.abs(line.x2 - x) ? '2' : '1';
+    if(line.cutdiff != undefined){
+        line.cutdiff.x += (x - line['x'+replace_number]);
+        line.cutdiff.y += (y - line['y'+replace_number]);
+    }else{
+        line.cutdiff = {x:x - line['x'+replace_number],y:y - line['y'+replace_number]};
+    }
+    line['x'+replace_number] = x;
+    line['y'+replace_number] = y;
 }
 
 //create Arc Poligon
@@ -418,8 +424,8 @@ function createPipeEdges(scene,line) {
     let x = ((line.x1+line.x2)/2)+line.edge_center_diff.x;
     let y = ((line.y1+line.y2)/2)-line.edge_center_diff.y;
     if (line.rightEdge.cutdiff != undefined) {
-        x -= line.rightEdge.cutdiff.x;
-        y -= line.rightEdge.cutdiff.y;
+        x += line.rightEdge.cutdiff.x/2;
+        y += line.rightEdge.cutdiff.y/2;
     }
     var polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
     polygon.setDepth(3);
@@ -434,8 +440,8 @@ function createPipeEdges(scene,line) {
     x = ((line.x1+line.x2)/2)-line.edge_center_diff.x;
     y = ((line.y1+line.y2)/2)+line.edge_center_diff.y;
     if (line.leftEdge.cutdiff != undefined) {
-        x -= line.leftEdge.cutdiff.x;
-        y -= line.leftEdge.cutdiff.y;
+        x += line.leftEdge.cutdiff.x/2;
+        y += line.leftEdge.cutdiff.y/2;
     }
     polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
     polygon.setDepth(3);
