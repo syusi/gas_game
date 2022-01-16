@@ -310,26 +310,39 @@ function pipeEdgeCut(point) {
         for (const line of edge_Lines) {
             let result = calcLineCross(temp_line,line);
             if(result == false){
+                //horizonal of two line
                 continue;
             }
             let [x,y] = result;
 
+            let is_line_cross = false;
+            let is_temp_cross = false;
+            
             let left = temp_line.x1 > temp_line.x2 ? temp_line.x1 : temp_line.x2;
             let right = left == temp_line.x1 ? temp_line.x2 : temp_line.x1;
             if (left > x && x > right) {
-                let replace_number = Math.abs(temp_line.x1 - x) > Math.abs(temp_line.x2 - x) ? '2' : '1';
-                temp_line.cutdiff = {x:temp_line['x'+replace_number] - x,y:temp_line['y'+replace_number] - y};
-                temp_line['x'+replace_number] = x;
-                temp_line['y'+replace_number] = y;
+                is_temp_cross = true;
             }
+
             left = line.x1 > line.x2 ? line.x1 : line.x2;
             right = left == line.x1 ? line.x2 : line.x1;
             if (left > x && x > right) {
+                is_line_cross = true;
+            }
+            //is cross both of line
+            if(is_line_cross && is_temp_cross){
+                let replace_number = Math.abs(temp_line.x1 - x) > Math.abs(temp_line.x2 - x) ? '2' : '1';
+                temp_line.cutdiff = {x: x - temp_line['x'+replace_number],y: y - temp_line['y'+replace_number]};
+                temp_line['x'+replace_number] = x;
+                temp_line['y'+replace_number] = y;
+
                 replace_number = Math.abs(line.x1 - x) > Math.abs(line.x2 - x) ? '2' : '1';
-                line.cutdiff = {x:line['x'+replace_number] - x,y:line['y'+replace_number] - y};
+                line.cutdiff = {x:x - line['x'+replace_number],y:y - line['y'+replace_number]};
                 line['x'+replace_number] = x;
                 line['y'+replace_number] = y;
             }
+
+            
         }
         temp_line = edge_Lines.shift();
     }
