@@ -56,6 +56,8 @@ var gasballs = [];
 var graphicses = [];
 var money = 150;
 var pipe_num = 3;
+var MAX_GASBALL_NUM = 20;
+var gasBallNum = MAX_GASBALL_NUM;
 
 var test_polygon=  null;
 const pipe_width = 40;
@@ -105,7 +107,7 @@ function create ()
 
         createStaticPolygon(scene,points,lines);
 
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < gasBallNum; i++) {
             var new_ball = scene.matter.add.image(630,180,'gasball');
             new_ball.setDepth(5);
             //var new_ball = scene.matter.add.gameObject(ball_img);
@@ -119,7 +121,7 @@ function create ()
             new_ball.setBounce(1);
             scene.matter.body.setInertia(new_ball.body,Infinity);
             scene.matter.body.setMass(new_ball.body,0.000000000001);
-            new_ball.setVelocity(Phaser.Math.Between(-3,3),Phaser.Math.Between(3,5));
+            new_ball.setVelocity(Phaser.Math.Between(-2,2),5);
             // pytsicsだったころの名残
             // for (const ball of gasballs) {
             //     scene.physics.add.collider(ball,new_ball);
@@ -130,11 +132,18 @@ function create ()
                 //collition on goal
                 if (pair.bodyA.id == 5) {
                     pair.bodyB.gameObject.destroy();
+                    gasBallNum -= 1;
+
+                    //CREAR flag;
+                    if (gasBallNum < (MAX_GASBALL_NUM/3)) {
+                        scene.add.text(800/3, 600/2, "    CREAR\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500"});
+                    }
                 }
             });
             new_ball.body.frictionStatic = 0;
             gasballs.push(new_ball);
         }
+        this.destroy();
         
     });
     
