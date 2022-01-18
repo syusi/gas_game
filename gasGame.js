@@ -47,6 +47,9 @@ function preload ()
     this.load.image('saisei','assets/saisei.png');
     this.load.image('gasball','assets/gasball.png');
     this.load.image('reset','assets/reset_buttn.png');
+    this.load.image('stone','assets/stone.png');
+    this.load.image('pipeUI','assets/pipe1_straight.png');
+    this.load.image('moneyUI','assets/money.png');
 }
 
 var scene;
@@ -58,7 +61,9 @@ var gasballs = [];
 var graphicses = [];
 var static_collisions = [];
 var money = 150;
+var money_UI = null;
 var pipe_num = 3;
+var pipe_UI = null;
 var MAX_GASBALL_NUM = 20;
 var gasBallNum = 0;
 
@@ -70,8 +75,8 @@ function initGame() {
 
     //init variable
     var gasBallNum = MAX_GASBALL_NUM;
-    var money = 150;
-    var pipe_num = 3;
+    pipe_UI.data.set('pipenum',pipe_num);
+    money_UI.data.set('money',money);
 
     //init pointer
     graphics = scene.add.graphics();
@@ -84,8 +89,13 @@ function initGame() {
     let home_point = addFulcrumPoint(graphics,200,180);
     points.push(home_point);
 
-    splite = scene.add.image(750,100,'saisei').setInteractive();
+
+    let stone = scene.add.image(300,400,'stone').setInteractive();
+    stone.setScale(0.5);
+
+    let splite = scene.add.image(750,100,'saisei').setInteractive();
     splite.setScale(0.2);
+
 
     splite.on('pointerdown',function (pointer) {
 
@@ -180,6 +190,20 @@ function create ()
     splite.setScale(0.2);
     splite.angle += 90;
 
+    pipe_UI = this.add.image(50,650,'pipeUI');
+    pipe_UI.setDataEnabled();
+    pipe_UI.text = scene.add.text(100,650,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
+    pipe_UI.data.set('pipenum',pipe_num);
+    pipe_UI.on('changedata-pipenum',rewriteUI);
+    pipe_UI.setScale(0.2);
+
+    money_UI = this.add.image(400,650,'moneyUI');
+    money_UI.setDataEnabled();
+    money_UI.text = scene.add.text(450,650,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
+    money_UI.data.set('money',money);
+    money_UI.on('changedata-money',rewriteUI);
+    money_UI.setScale(0.2);
+
     //物理計算関係
     scene.matter.world.setBounds(1).disableGravity();
 
@@ -271,6 +295,8 @@ function create ()
             point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line));
             point.connect_Line.push(drowing_line);    
         }
+        pipe_UI.data.values.pipenum -= 1;
+        money_UI.data.values.money -= 100;
     });
 }
 
@@ -528,6 +554,7 @@ function createPipeEdges(scene,line) {
     static_collisions.push(obj);
 }
 
+
 function calcLineCross(line1,line2) {
     
     let [a1,b1] = calcExpressLine(line1);
@@ -548,6 +575,10 @@ function calcExpressLine(line) {
     let b = line.y1 - a*line.x1;
 
     return [a,b];
+}
+
+function rewriteUI(parent,value,previousValue) {
+    parent.text.setText("x"+value);
 }
 
 function update() {
