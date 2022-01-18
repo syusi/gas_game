@@ -46,61 +46,45 @@ function preload ()
     this.load.image('sora','assets/sora.png');
     this.load.image('saisei','assets/saisei.png');
     this.load.image('gasball','assets/gasball.png');
+    this.load.image('reset','assets/reset_buttn.png');
 }
 
-var platforms;
-var logo;
+var scene;
+var graphics;
+
 var lines = [];
 var points = [];
 var gasballs = [];
 var graphicses = [];
+var static_collisions = [];
 var money = 150;
 var pipe_num = 3;
 var MAX_GASBALL_NUM = 20;
-var gasBallNum = MAX_GASBALL_NUM;
+var gasBallNum = 0;
 
 var test_polygon=  null;
 const pipe_width = 40;
 const curve_divide_unit = 15;
 
-function create ()
-{
-    //init game field
-    var scene = this;
-    var splite = this.add.image(400,0,'sora');
-    splite.setScale(2);
-    var field = this.add.image(400, 375, 'back').setInteractive();
-    splite = this.add.image(75,75,'house');
-    splite.setScale(0.3);
-    splite = this.add.image(750,75,'gastank');
-    splite.setScale(0.3);
-    splite = this.add.image(175,150,'curve_pipe');
-    splite.setScale(0.2);
-    splite.angle += 180;
-    splite = this.add.image(650,150,'curve_pipe');
-    splite.setScale(0.2);
-    splite.angle += 90;
-    var drowing_line = null;
-    var start_point = null;
+function initGame() {
 
-    var is_pointerdown = false;
+    //init variable
+    var gasBallNum = MAX_GASBALL_NUM;
+    var money = 150;
+    var pipe_num = 3;
 
     //init pointer
-    var graphics = scene.add.graphics();
+    graphics = scene.add.graphics();
+    graphicses.push(graphics);
 
     //gabana point
     var point = addFulcrumPoint(graphics,630,180);
     points.push(point);
     //home point
-    home_point = addFulcrumPoint(graphics,200,180);
-    let home = this.matter.add.circle(200,180,15,{isStatic:true});
-    home.goal = true;
+    let home_point = addFulcrumPoint(graphics,200,180);
     points.push(home_point);
 
-    //物理計算関係
-    this.matter.world.setBounds(1).disableGravity();
-
-    splite = this.add.image(750,100,'saisei').setInteractive();
+    splite = scene.add.image(750,100,'saisei').setInteractive();
     splite.setScale(0.2);
 
     splite.on('pointerdown',function (pointer) {
@@ -130,7 +114,7 @@ function create ()
             //scene.physics.add.collider(new_ball,testline);
             new_ball.setOnCollide(function (pair) {
                 //collition on goal
-                if (pair.bodyA.id == 5) {
+                if (pair.bodyA.id == 9) {
                     pair.bodyB.gameObject.destroy();
                     gasBallNum -= 1;
 
@@ -143,15 +127,78 @@ function create ()
             new_ball.body.frictionStatic = 0;
             gasballs.push(new_ball);
         }
+
+        reset = scene.add.image(750,100,'reset').setInteractive();
+        reset.setScale(0.2);
+
+        reset.on('pointerdown',function (pointer) {
+            reset_array();
+            this.destroy();
+        });
         this.destroy();
         
     });
+}
+
+function reset_array() {
+    for (const graphics of graphicses) {
+        graphics.clear();
+    }
+    graphicses.splice(0);
+
+    for (const coll of static_collisions) {
+        scene.matter.world.remove(coll);
+    }
+    static_collisions.splice(0);
+
+    for (const ball of gasballs) {
+        ball.destroy();
+    }
+    gasballs.splice(0);
+
+    lines.splice(0);
+    points.splice(0);
+
+    initGame();
+}
+
+function create ()
+{
+    //init game field
+    scene = this;
+    var splite = this.add.image(400,0,'sora');
+    splite.setScale(2);
+    var field = this.add.image(400, 375, 'back').setInteractive();
+    splite = this.add.image(75,75,'house');
+    splite.setScale(0.3);
+    splite = this.add.image(750,75,'gastank');
+    splite.setScale(0.3);
+    splite = this.add.image(175,150,'curve_pipe');
+    splite.setScale(0.2);
+    splite.angle += 180;
+    splite = this.add.image(650,150,'curve_pipe');
+    splite.setScale(0.2);
+    splite.angle += 90;
+
+    //物理計算関係
+    scene.matter.world.setBounds(1).disableGravity();
+
+    let home = scene.matter.add.circle(200,180,15,{isStatic:true});
+    home.goal = true;
     
+    //init game
+    initGame();
+
+    var drowing_line = null;
+    var start_point = null;
+
+    var is_pointerdown = false;    
 
     field.on('pointerdown',function (pointer,dragX,dragY) {
         console.log('dragstart++');
         is_pointerdown = true;
         graphics = scene.add.graphics();
+        graphicses.push(graphics);
         graphics.depth = 1;
         //lines.push(graphics);
 
@@ -391,6 +438,7 @@ function createArcPoligon(scene,point,radius,start_angle,end_angle){
         let circle = scene.matter.add.circle(x+point.x,y+point.y,5,{isStatic:true});
         circle.frictionStatic = 0;
         circle_points.push({x:x,y:y});
+        static_collisions.push(circle);
     }
     return circle_points;
 }
@@ -456,9 +504,10 @@ function createPipeEdges(scene,line) {
     
     //polygon.setDisplayOrigin(0,0);
     test_polygon = polygon;
-    var obj = scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } }).setOrigin(1,0.5);
+    let obj = scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } }).setOrigin(1,0.5);
     obj.setFriction(0);
     obj.body.frictionStatic = 0;
+    static_collisions.push(obj);
 
     //dynamic polygon create left
     figure = makeLinePolygon(line.leftEdge,-line.edge_polygon_coll.x,-line.edge_polygon_coll.y,0,0);
@@ -476,6 +525,7 @@ function createPipeEdges(scene,line) {
     obj = scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
     obj.setFriction(0);
     obj.body.frictionStatic = 0;
+    static_collisions.push(obj);
 }
 
 function calcLineCross(line1,line2) {
