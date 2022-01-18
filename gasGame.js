@@ -3,7 +3,7 @@
 var config = {
     type: Phaser.AUTO,
     width: 800,
-    height: 600,
+    height: 700,
     physics: {
         //arcade　軽い代わりに斜め直線判定等の機能が制限されている見たい？
         default: 'matter',
@@ -53,6 +53,9 @@ var logo;
 var lines = [];
 var points = [];
 var gasballs = [];
+var graphicses = [];
+var money = 150;
+var pipe_num = 3;
 
 var test_polygon=  null;
 const pipe_width = 40;
@@ -80,6 +83,18 @@ function create ()
 
     var is_pointerdown = false;
 
+    //init pointer
+    var graphics = scene.add.graphics();
+
+    //gabana point
+    var point = addFulcrumPoint(graphics,630,180);
+    points.push(point);
+    //home point
+    home_point = addFulcrumPoint(graphics,200,180);
+    let home = this.matter.add.circle(200,180,15,{isStatic:true});
+    home.goal = true;
+    points.push(home_point);
+
     //物理計算関係
     this.matter.world.setBounds(1).disableGravity();
 
@@ -90,7 +105,7 @@ function create ()
 
         createStaticPolygon(scene,points,lines);
 
-        for (let i = 0; i < 16; i++) {
+        for (let i = 0; i < 20; i++) {
             var new_ball = scene.matter.add.image(630,180,'gasball');
             new_ball.setDepth(5);
             //var new_ball = scene.matter.add.gameObject(ball_img);
@@ -111,20 +126,18 @@ function create ()
             // }
             // scene.physics.add.collider(new_ball,zones);
             //scene.physics.add.collider(new_ball,testline);
+            new_ball.setOnCollide(function (pair) {
+                //collition on goal
+                if (pair.bodyA.id == 5) {
+                    pair.bodyB.gameObject.destroy();
+                }
+            });
+            new_ball.body.frictionStatic = 0;
             gasballs.push(new_ball);
         }
         
     });
-
-    //init pointer
-    var graphics = scene.add.graphics();
-
-    //gabana point
-    var point = addFulcrumPoint(graphics,630,180);
-    points.push(point);
-    //home point
-    point = addFulcrumPoint(graphics,200,180);
-    points.push(point);
+    
 
     field.on('pointerdown',function (pointer,dragX,dragY) {
         console.log('dragstart++');
@@ -367,19 +380,10 @@ function createArcPoligon(scene,point,radius,start_angle,end_angle){
         let x = -radius * Math.cos(rad);
         let y = -radius * Math.sin(rad);
         let circle = scene.matter.add.circle(x+point.x,y+point.y,5,{isStatic:true});
+        circle.frictionStatic = 0;
         circle_points.push({x:x,y:y});
     }
     return circle_points;
-}
-
-//create poligon figured line
-function makeLinePolygon(line,width,height) {
-    let polygon = [];
-    polygon.push({x:line.x1+width,y:line.y1-height});
-    polygon.push({x:line.x1-width,y:line.y1+height});
-    polygon.push({x:line.x2-width,y:line.y2+height});
-    polygon.push({x:line.x2+width,y:line.y2-height});
-    return polygon;
 }
 
 // calc x,y pos distance in line of center
@@ -416,38 +420,53 @@ function calcPipeEdge(line) {
     };
 }
 
+//create poligon figured line
+function makeLinePolygon(line,width,height,corx,cory) {
+    let polygon = [];
+    polygon.push({x:line.x1+width-corx,y:line.y1-height-cory});
+    polygon.push({x:line.x1-width-corx,y:line.y1+height-cory});
+    polygon.push({x:line.x2-width-corx,y:line.y2+height-cory});
+    polygon.push({x:line.x2+width-corx,y:line.y2-height-cory});
+    return polygon;
+}
+
+
 function createPipeEdges(scene,line) {
     // //create pipe edges from 
 
     //dynamic polygon create right
-    var figure = makeLinePolygon(line.rightEdge,line.edge_polygon_coll.x,line.edge_polygon_coll.y);
     let x = ((line.x1+line.x2)/2)+line.edge_center_diff.x;
     let y = ((line.y1+line.y2)/2)-line.edge_center_diff.y;
     if (line.rightEdge.cutdiff != undefined) {
         x += line.rightEdge.cutdiff.x/2;
         y += line.rightEdge.cutdiff.y/2;
     }
-    var polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
+    var figure = makeLinePolygon(line.rightEdge,line.edge_polygon_coll.x,line.edge_polygon_coll.y,x*0.9,y*0.5);//20 178
+    var polygon = scene.add.polygon(x,y,figure);
     polygon.setDepth(3);
     
     //polygon.setDisplayOrigin(0,0);
     test_polygon = polygon;
-    scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
-
+    var obj = scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } }).setOrigin(1,0.5);
+    obj.setFriction(0);
+    obj.body.frictionStatic = 0;
 
     //dynamic polygon create left
-    figure = makeLinePolygon(line.leftEdge,-line.edge_polygon_coll.x,-line.edge_polygon_coll.y);
+    figure = makeLinePolygon(line.leftEdge,-line.edge_polygon_coll.x,-line.edge_polygon_coll.y,0,0);
     x = ((line.x1+line.x2)/2)-line.edge_center_diff.x;
     y = ((line.y1+line.y2)/2)+line.edge_center_diff.y;
     if (line.leftEdge.cutdiff != undefined) {
         x += line.leftEdge.cutdiff.x/2;
         y += line.leftEdge.cutdiff.y/2;
     }
-    polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
+    //polygon = scene.add.polygon(x,y,figure,0x0000ff,0.2);
+    polygon = scene.add.polygon(x,y,figure);
     polygon.setDepth(3);
     //polygon.setDisplayOrigin(0,0);
     test_polygon = polygon;
-    scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
+    obj = scene.matter.add.gameObject(polygon, { isStatic:true ,shape: { type: 'fromVerts', verts: figure, flagInternal: true } });
+    obj.setFriction(0);
+    obj.body.frictionStatic = 0;
 }
 
 function calcLineCross(line1,line2) {
