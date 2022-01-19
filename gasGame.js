@@ -190,16 +190,16 @@ function create ()
     splite.setScale(0.2);
     splite.angle += 90;
 
-    pipe_UI = this.add.image(50,650,'pipeUI');
+    pipe_UI = this.add.image(90,650,'pipeUI');
     pipe_UI.setDataEnabled();
-    pipe_UI.text = scene.add.text(100,650,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
+    pipe_UI.text = scene.add.text(170,630,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
     pipe_UI.data.set('pipenum',pipe_num);
     pipe_UI.on('changedata-pipenum',rewriteUI);
     pipe_UI.setScale(0.2);
 
     money_UI = this.add.image(400,650,'moneyUI');
     money_UI.setDataEnabled();
-    money_UI.text = scene.add.text(450,650,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
+    money_UI.text = scene.add.text(450,635,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
     money_UI.data.set('money',money);
     money_UI.on('changedata-money',rewriteUI);
     money_UI.setScale(0.2);
@@ -578,7 +578,7 @@ function calcExpressLine(line) {
 }
 
 function rewriteUI(parent,value,previousValue) {
-    parent.text.setText("x"+value);
+    parent.text.setText(" x "+value);
 }
 
 function update() {
