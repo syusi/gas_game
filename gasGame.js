@@ -168,7 +168,7 @@ function initGame() {
                         if (money_UI.data.values.moneydiff >= 0) {
                             star+= 40;
                         }
-                        goalText = scene.add.text(800/3, 600/2, "    CREAR\nSCORE："+star+"\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500",backgroundColor:"#8A6753"});
+                        goalText = scene.add.text(800/3, 600/2, "    CREAR\nSCORE:"+star+"\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500",backgroundColor:"#8A6753"});
                         goalText.setDepth(5);
                         goalText.setInteractive();
                         goalText.on('pointerdown',function (pointer) {
