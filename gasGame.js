@@ -12,7 +12,7 @@ var config = {
             debug:true
         },
         matter :{
-            debug:true,
+            debug:false,
             setBounds: {
                 left: true,
                 right:true,
@@ -64,6 +64,9 @@ function preload ()
         }
         reset_array();
     });
+
+    this.load.audio('bgm','assets/BGM/natsuyasuminotanken.mp3');
+    this.load.audio('se','assets/BGM/meka_ge_renketu02.mp3');
 }
 
 var scene;
@@ -88,6 +91,9 @@ var timeoutId = null;
 var test_polygon=  null;
 const pipe_width = 40;
 const curve_divide_unit = 15;
+
+var BGM = null;
+var SE = null;
 
 
 function initGame() { 
@@ -155,7 +161,14 @@ function initGame() {
 
                     //CREAR flag;
                     if (gasBallNum < (MAX_GASBALL_NUM/3) && goalText == null) {
-                        goalText = scene.add.text(800/3, 600/2, "    CREAR\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500",backgroundColor:"#8A6753"});
+                        let star = '★';
+                        if (pipe_UI.data.values.pipenum >= 0) {
+                            star+= '★';
+                        }
+                        if (money_UI.data.values.moneydiff >= 0) {
+                            star+= '★';
+                        }
+                        goalText = scene.add.text(800/3, 600/2, "    CREAR\n'+star+'\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500",backgroundColor:"#8A6753"});
                         goalText.setDepth(5);
                         goalText.setInteractive();
                         goalText.on('pointerdown',function (pointer) {
@@ -328,6 +341,14 @@ function create ()
     let home = scene.matter.add.circle(200,180,15,{isStatic:true});
     home.goal = true;
     
+    BGM = scene.sound.add('bgm');
+    BGM.setLoop(true);
+    BGM.setVolume(0.1);
+    BGM.play();
+
+    SE = scene.sound.add('se');
+    SE.setVolume(0.1);
+
     //init game
     initGame();
 
@@ -423,6 +444,8 @@ function create ()
         pipe_UI.data.values.pipediff = 0;
         money_UI.data.values.money -= money_UI.data.values.moneydiff;
         money_UI.data.values.moneydiff = 0;
+
+        SE.play();
     });
 }
 
@@ -732,4 +755,12 @@ function render() {
     // game.debug.lineinfo(line,32,32);
 
     // game.debug.text("Drag the handles",32,300);
+}
+
+const eventName = typeof document.ontouchend !== 'undefined' ? 'touchend' : 'mouseup';
+document.addEventListener(eventName, initAudioContext);
+function initAudioContext(){
+  document.removeEventListener(eventName, initAudioContext);
+  // wake up AudioContext
+  ctx.resume();
 }
