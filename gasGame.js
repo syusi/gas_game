@@ -161,14 +161,14 @@ function initGame() {
 
                     //CREAR flag;
                     if (gasBallNum < (MAX_GASBALL_NUM/3) && goalText == null) {
-                        let star = '★';
+                        let star = 20;
                         if (pipe_UI.data.values.pipenum >= 0) {
-                            star+= '★';
+                            star+= 40;
                         }
                         if (money_UI.data.values.moneydiff >= 0) {
-                            star+= '★';
+                            star+= 40;
                         }
-                        goalText = scene.add.text(800/3, 600/2, "    CREAR\n'+star+'\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500",backgroundColor:"#8A6753"});
+                        goalText = scene.add.text(800/3, 600/2, "    CREAR\nSCORE："+star+"\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500",backgroundColor:"#8A6753"});
                         goalText.setDepth(5);
                         goalText.setInteractive();
                         goalText.on('pointerdown',function (pointer) {
