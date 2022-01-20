@@ -84,6 +84,8 @@ var pipe_UI = null;
 var MAX_GASBALL_NUM = 20;
 var gasBallNum = 0;
 
+var field_obstacles = [];
+
 var goalText = null;
 var reset = null;
 var timeoutId = null;
@@ -121,8 +123,9 @@ function initGame() {
     points.push(home_point);
 
     for (const ob of info.obstecles) {
-        let stone = scene.add.image(ob.x,ob.y,ob.name).setInteractive();
-        stone.setScale(ob.scale);    
+        let obstate = scene.add.image(ob.x,ob.y,ob.name).setInteractive();
+        obstate.setScale(ob.scale);   
+        field_obstacles.push(obstate);
     }
 
     let splite = scene.add.image(750,100,'saisei').setInteractive();
@@ -356,6 +359,7 @@ function create ()
     var start_point = null;
 
     var is_pointerdown = false;    
+    var line_on_obstacle = false;
 
     field.on('pointerdown',function (pointer,dragX,dragY) {
         console.log('dragstart++');
@@ -374,7 +378,6 @@ function create ()
                 break;
             }
         }
-        lines.push(drowing_line);
 
         graphics.clear();
         graphics.lineStyle(pipe_width,0xd3d3d3);
@@ -389,8 +392,19 @@ function create ()
             drowing_line.x2 = pointer.x;
             drowing_line.y2 = pointer.y;
 
+            line_on_obstacle = false;
+            for (const ob of field_obstacles) {
+                let geom = new Phaser.Geom.Rectangle(ob.x - ob.width/2, ob.y - ob.height/2, ob.width, ob.height);
+                if (Phaser.Geom.Intersects.LineToRectangle(drowing_line, geom)) {
+                    line_on_obstacle = true;
+                }
+            }
             graphics.clear();
-            graphics.lineStyle(pipe_width,0xd3d3d3);
+            if (line_on_obstacle) {
+                graphics.lineStyle(pipe_width,0xff1010);
+            }else{
+                graphics.lineStyle(pipe_width,0xd3d3d3);
+            }
             graphics.strokeLineShape(drowing_line);
 
             let dis = Phaser.Math.Distance.Between(drowing_line.x1,drowing_line.y1,drowing_line.x2,drowing_line.y2);
@@ -401,7 +415,13 @@ function create ()
 
     field.on('pointerup',function (pointer,dragX,dragY) {
         is_pointerdown = false;
-    
+        
+        if(line_on_obstacle){
+            line_on_obstacle = false;
+            graphics.clear();
+            return;
+        }
+
         let isPoint_in = false;
         //離した点の修正
         for (const point of points) {
@@ -416,6 +436,7 @@ function create ()
                 break;
             }
         }
+        lines.push(drowing_line);
         graphics.clear();
         graphics.lineStyle(pipe_width,0xd3d3d3);
         graphics.strokeLineShape(drowing_line);
@@ -761,6 +782,10 @@ const eventName = typeof document.ontouchend !== 'undefined' ? 'touchend' : 'mou
 document.addEventListener(eventName, initAudioContext);
 function initAudioContext(){
   document.removeEventListener(eventName, initAudioContext);
-  // wake up AudioContext
-  ctx.resume();
+  try {
+    // wake up AudioContext. this code is 100% error
+    ctx.resume();
+  } catch (error) {
+      
+  }
 }
