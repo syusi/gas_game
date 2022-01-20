@@ -30,7 +30,8 @@ var config = {
 
 var pipes = null; 
 var game = new Phaser.Game(config);
-
+var stage = 1;
+var first_load = false;
 
 function preload ()
 {
@@ -50,6 +51,19 @@ function preload ()
     this.load.image('stone','assets/stone.png');
     this.load.image('pipeUI','assets/pipe1_straight.png');
     this.load.image('moneyUI','assets/money.png');
+
+    if (window.location.search.indexOf("stage") !== -1) {
+        stage = window.location.search.split("=")[1];
+    }
+    this.load.json('stage','stage/stage'+stage+'.json');
+
+    this.load.on('filecomplete-json-stage',function ( key, type, data ) {
+        if (first_load == false) {
+            first_load = true;
+            return;
+        }
+        reset_array();
+    });
 }
 
 var scene;
@@ -60,18 +74,28 @@ var points = [];
 var gasballs = [];
 var graphicses = [];
 var static_collisions = [];
-var money = 150;
+var money = 500;
 var money_UI = null;
-var pipe_num = 3;
+var pipe_num = 1;
 var pipe_UI = null;
 var MAX_GASBALL_NUM = 20;
 var gasBallNum = 0;
+
+var goalText = null;
+var reset = null;
+var timeoutId = null;
 
 var test_polygon=  null;
 const pipe_width = 40;
 const curve_divide_unit = 15;
 
-function initGame() {
+
+function initGame() { 
+
+    //stage data load
+    info = scene.cache.json.get('stage');
+    pipe_num = info.pipe_num;
+    money = info.money;
 
     //init variable
     var gasBallNum = MAX_GASBALL_NUM;
@@ -80,18 +104,20 @@ function initGame() {
 
     //init pointer
     graphics = scene.add.graphics();
+    graphics.clear();
     graphicses.push(graphics);
 
     //gabana point
-    var point = addFulcrumPoint(graphics,630,180);
+    let point = addFulcrumPoint(graphics,630,180);
     points.push(point);
     //home point
     let home_point = addFulcrumPoint(graphics,200,180);
     points.push(home_point);
 
-
-    let stone = scene.add.image(300,400,'stone').setInteractive();
-    stone.setScale(0.5);
+    for (const ob of info.obstecles) {
+        let stone = scene.add.image(ob.x,ob.y,ob.name).setInteractive();
+        stone.setScale(ob.scale);    
+    }
 
     let splite = scene.add.image(750,100,'saisei').setInteractive();
     splite.setScale(0.2);
@@ -101,14 +127,11 @@ function initGame() {
 
         createStaticPolygon(scene,points,lines);
 
-        for (let i = 0; i < gasBallNum; i++) {
+        let makenum = MAX_GASBALL_NUM;
+        stop_gasball = false;
+        const makeGasball = () => {
             var new_ball = scene.matter.add.image(630,180,'gasball');
-            new_ball.setDepth(5);
-            //var new_ball = scene.matter.add.gameObject(ball_img);
-            
-            //matterは別のエンジンらしい。そっち見たほうが早い。多分完全な反射をするのは無理そう。
-            //physicsだったころの名残
-            //new_ball.setCollideWorldBounds(true);
+            new_ball.setDepth(4);
             new_ball.setCircle(4);
             //摩擦
             new_ball.setFriction(0,0,0);
@@ -116,38 +139,122 @@ function initGame() {
             scene.matter.body.setInertia(new_ball.body,Infinity);
             scene.matter.body.setMass(new_ball.body,0.000000000001);
             new_ball.setVelocity(Phaser.Math.Between(-2,2),5);
-            // pytsicsだったころの名残
-            // for (const ball of gasballs) {
-            //     scene.physics.add.collider(ball,new_ball);
-            // }
-            // scene.physics.add.collider(new_ball,zones);
-            //scene.physics.add.collider(new_ball,testline);
+            new_ball.body.frictionStatic = 0;
+
             new_ball.setOnCollide(function (pair) {
+                // hold speed
+                let v = hold_vector(this.velocity.x,this.velocity.y,3);
+                if(v != false){
+                    this.gameObject.setVelocity(v.x,v.y);
+                }
+
                 //collition on goal
                 if (pair.bodyA.id == 9) {
                     pair.bodyB.gameObject.destroy();
                     gasBallNum -= 1;
 
                     //CREAR flag;
-                    if (gasBallNum < (MAX_GASBALL_NUM/3)) {
-                        scene.add.text(800/3, 600/2, "    CREAR\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500"});
+                    if (gasBallNum < (MAX_GASBALL_NUM/3) && goalText == null) {
+                        goalText = scene.add.text(800/3, 600/2, "    CREAR\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500",backgroundColor:"#8A6753"});
+                        goalText.setDepth(5);
+                        goalText.setInteractive();
+                        goalText.on('pointerdown',function (pointer) {
+                            scene.cache.json.remove('stage');
+                            scene.load.json('stage','stage/stage2.json');
+                            scene.load.start();
+                            goalText = null;
+                            this.destroy();
+                        });
+
                     }
                 }
             });
-            new_ball.body.frictionStatic = 0;
+
             gasballs.push(new_ball);
+
+            makenum -= 1;
+            timeoutId = setTimeout(makeGasball, 250);
+            if (makenum < 0) {
+                clearTimeout(timeoutId);
+            }
+
         }
+        makeGasball();
+
+        // for (let i = 0; i < gasBallNum; i++) {
+
+        //     var new_ball = scene.matter.add.image(630,180,'gasball');
+        //     new_ball.setDepth(4);
+        //     //var new_ball = scene.matter.add.gameObject(ball_img);
+            
+        //     //matterは別のエンジンらしい。そっち見たほうが早い。多分完全な反射をするのは無理そう。
+        //     //physicsだったころの名残
+        //     //new_ball.setCollideWorldBounds(true);
+        //     new_ball.setCircle(4);
+        //     //摩擦
+        //     new_ball.setFriction(0,0,0);
+        //     new_ball.setBounce(1);
+        //     scene.matter.body.setInertia(new_ball.body,Infinity);
+        //     scene.matter.body.setMass(new_ball.body,0.000000000001);
+        //     new_ball.setVelocity(Phaser.Math.Between(-2,2),5);
+        //     // pytsicsだったころの名残
+        //     // for (const ball of gasballs) {
+        //     //     scene.physics.add.collider(ball,new_ball);
+        //     // }
+        //     // scene.physics.add.collider(new_ball,zones);
+        //     //scene.physics.add.collider(new_ball,testline);
+        //     new_ball.setOnCollide(function (pair) {
+        //         // hold speed
+        //         // let v = hold_vector(this.velocity.x,this.velocity.y,2);
+        //         // this.gameObject.setVelocity(v);
+
+        //         //collition on goal
+        //         if (pair.bodyA.id == 9) {
+        //             pair.bodyB.gameObject.destroy();
+        //             gasBallNum -= 1;
+
+        //             //CREAR flag;
+        //             if (gasBallNum < (MAX_GASBALL_NUM/3) && goalText == null) {
+        //                 goalText = scene.add.text(800/3, 600/2, "    CREAR\nclick to next game!", {fontSize: 30,fontFamily: "Arial",fill:"#FFA500",backgroundColor:"#8A6753"});
+        //                 goalText.setDepth(5);
+        //                 goalText.setInteractive();
+        //                 goalText.on('pointerdown',function (pointer) {
+        //                     scene.cache.json.remove('stage');
+        //                     scene.load.json('stage','stage/stage2.json');
+        //                     scene.load.start(); 
+        //                     this.destroy();
+        //                 });
+
+        //             }
+        //         }
+        //     });
+        //     new_ball.body.frictionStatic = 0;
+        //     gasballs.push(new_ball);
+        // }
 
         reset = scene.add.image(750,100,'reset').setInteractive();
         reset.setScale(0.2);
 
         reset.on('pointerdown',function (pointer) {
+            clearTimeout(timeoutId);
             reset_array();
             this.destroy();
         });
         this.destroy();
         
     });
+}
+
+function hold_vector(x,y,v) {
+    let now_v = Phaser.Math.Distance.Between(0,0,x,y);
+    if (now_v < v) {
+        let rad = Phaser.Geom.Line.Angle({x1:0,x2:x,y1:0,y2:y});
+        y = v*Math.cos(rad);
+        x = v*Math.sin(rad);
+        return {x:x,y:y};
+    }
+    return false;
+
 }
 
 function reset_array() {
@@ -165,6 +272,11 @@ function reset_array() {
         ball.destroy();
     }
     gasballs.splice(0);
+
+    if (reset != null) {
+        reset.destroy();
+        reset = null;
+    }
 
     lines.splice(0);
     points.splice(0);
@@ -194,14 +306,20 @@ function create ()
     pipe_UI.setDataEnabled();
     pipe_UI.text = scene.add.text(170,630,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
     pipe_UI.data.set('pipenum',pipe_num);
-    pipe_UI.on('changedata-pipenum',rewriteUI);
+    pipe_UI.on('changedata-pipenum',rewriteNumUI);
+    pipe_UI.diffText = scene.add.text(270,630,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
+    pipe_UI.data.set('pipediff',0);
+    pipe_UI.on('changedata-pipediff',rewrite_diffUI);
     pipe_UI.setScale(0.2);
 
     money_UI = this.add.image(400,650,'moneyUI');
     money_UI.setDataEnabled();
     money_UI.text = scene.add.text(450,635,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
     money_UI.data.set('money',money);
-    money_UI.on('changedata-money',rewriteUI);
+    money_UI.on('changedata-money',rewriteNumUI);
+    money_UI.diffText = scene.add.text(550,635,"", {fontSize: 30,fontFamily: "Arial",fill:"#FFFFFF"});
+    money_UI.data.set('moneydiff',0);
+    money_UI.on('changedata-moneydiff',rewrite_diffUI);
     money_UI.setScale(0.2);
 
     //物理計算関係
@@ -240,6 +358,8 @@ function create ()
         graphics.clear();
         graphics.lineStyle(pipe_width,0xd3d3d3);
         graphics.strokeLineShape(drowing_line);
+
+        pipe_UI.data.values.pipediff = 1;
     });
 
     field.on('pointermove',function (pointer,dragX,dragY) {
@@ -251,6 +371,10 @@ function create ()
             graphics.clear();
             graphics.lineStyle(pipe_width,0xd3d3d3);
             graphics.strokeLineShape(drowing_line);
+
+            let dis = Phaser.Math.Distance.Between(drowing_line.x1,drowing_line.y1,drowing_line.x2,drowing_line.y2);
+            dis = parseInt(dis);
+            money_UI.data.values.moneydiff = dis;
         }
     });
 
@@ -296,7 +420,9 @@ function create ()
             point.connect_Line.push(drowing_line);    
         }
         pipe_UI.data.values.pipenum -= 1;
-        money_UI.data.values.money -= 100;
+        pipe_UI.data.values.pipediff = 0;
+        money_UI.data.values.money -= money_UI.data.values.moneydiff;
+        money_UI.data.values.moneydiff = 0;
     });
 }
 
@@ -577,8 +703,15 @@ function calcExpressLine(line) {
     return [a,b];
 }
 
-function rewriteUI(parent,value,previousValue) {
+function rewriteNumUI(parent,value,previousValue) {
     parent.text.setText(" x "+value);
+}
+function rewrite_diffUI(parent,value,previousValue) {
+    if (value == 0) {
+        parent.diffText.setText("");        
+    }else{
+        parent.diffText.setText("-"+value);
+    }
 }
 
 function update() {
