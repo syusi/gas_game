@@ -11,5 +11,5 @@
     ],
     "name": "gas flow simulator 2022",
     "short_name": "gas sim",
-    "start_url": "gasgame.html"
+    "start_url": "gas_game/gasGame.html"
   }
