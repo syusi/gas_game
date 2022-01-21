@@ -12,7 +12,7 @@ var config = {
             debug:true
         },
         matter :{
-            debug:true,
+            debug:false,
             setBounds: {
                 left: true,
                 right:true,
