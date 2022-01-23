@@ -1,0 +1,8 @@
+{
+    "name":"stage4",
+    "pipe_num":3,
+    "money":700,
+    "obstecles":[
+        {"name":"stone","x":450,"y":200,"scale":0.5}
+    ]
+}

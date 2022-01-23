@@ -1,0 +1,9 @@
+{
+    "name":"stage3",
+    "pipe_num":4,
+    "money":1300,
+    "obstecles":[
+        {"name":"stone","x":450,"y":250,"scale":0.9},
+        {"name":"stone","x":200,"y":400,"scale":0.5}
+    ]
+}
