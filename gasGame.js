@@ -51,6 +51,8 @@ function preload ()
     this.load.image('stone','assets/stone.png');
     this.load.image('pipeUI','assets/pipe1_straight.png');
     this.load.image('moneyUI','assets/money.png');
+    this.load.image('howto','assets/howtoplay.png');
+    this.load.image('tutorial','assets/tutorial.png');
 
     if (window.location.search.indexOf("stage") !== -1) {
         stage = window.location.search.split("=")[1];
@@ -352,6 +354,19 @@ function create ()
     SE = scene.sound.add('se');
     SE.setVolume(0.1);
 
+    //tutorial page add;
+    tutorial_UI = scene.add.image(700,650,'howto');
+    tutorial_UI.setScale(0.5);
+    tutorial_UI.setInteractive();
+    tutorial_UI.on('pointerdown',function(pointer,dragX,dragY){
+        tutorial_image = scene.add.image(400,350,'tutorial');
+        tutorial_image.setDepth(10);
+        tutorial_image.setInteractive();
+        tutorial_image.on('pointerdown',function(pointer,dragX,dragY){
+            this.destroy();
+        });
+    });
+
     //init game
     initGame();
 
@@ -414,59 +429,63 @@ function create ()
     });
 
     field.on('pointerup',function (pointer,dragX,dragY) {
-        is_pointerdown = false;
-        
-        if(line_on_obstacle){
-            line_on_obstacle = false;
-            graphics.clear();
-            return;
-        }
+        if(is_pointerdown == true){
 
-        let isPoint_in = false;
-        //離した点の修正
-        for (const point of points) {
-            if(checkPointer(point,pointer)){
-                drowing_line.x2 = point.x;
-                drowing_line.y2 = point.y; 
 
-                point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line));
-                point.connect_Line.push(drowing_line);
-
-                isPoint_in = true;
-                break;
+            is_pointerdown = false;
+            
+            if(line_on_obstacle){
+                line_on_obstacle = false;
+                graphics.clear();
+                return;
             }
+
+            let isPoint_in = false;
+            //離した点の修正
+            for (const point of points) {
+                if(checkPointer(point,pointer)){
+                    drowing_line.x2 = point.x;
+                    drowing_line.y2 = point.y; 
+
+                    point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line));
+                    point.connect_Line.push(drowing_line);
+
+                    isPoint_in = true;
+                    break;
+                }
+            }
+            lines.push(drowing_line);
+            graphics.clear();
+            graphics.lineStyle(pipe_width,0xd3d3d3);
+            graphics.strokeLineShape(drowing_line);
+
+            //createPipeEdges(scene,line);
+
+            //スタート点の修正
+            if (start_point == null) {
+                start_point = addFulcrumPoint(graphics,drowing_line.x1,drowing_line.y1);
+                points.push(start_point);
+            }
+
+            start_point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line)+3.14);
+            start_point.connect_Line.push(drowing_line);
+            start_point = null;
+
+            //ゴール点の描画
+            if (isPoint_in == false) {
+                var point = addFulcrumPoint(graphics,drowing_line.x2,drowing_line.y2);
+                points.push(point);
+                //pointに入射角も入れる
+                point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line));
+                point.connect_Line.push(drowing_line);    
+            }
+            pipe_UI.data.values.pipenum -= 1;
+            pipe_UI.data.values.pipediff = 0;
+            money_UI.data.values.money -= money_UI.data.values.moneydiff;
+            money_UI.data.values.moneydiff = 0;
+
+            SE.play();
         }
-        lines.push(drowing_line);
-        graphics.clear();
-        graphics.lineStyle(pipe_width,0xd3d3d3);
-        graphics.strokeLineShape(drowing_line);
-
-        //createPipeEdges(scene,line);
-
-        //スタート点の修正
-        if (start_point == null) {
-            start_point = addFulcrumPoint(graphics,drowing_line.x1,drowing_line.y1);
-            points.push(start_point);
-        }
-
-        start_point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line)+3.14);
-        start_point.connect_Line.push(drowing_line);
-        start_point = null;
-
-        //ゴール点の描画
-        if (isPoint_in == false) {
-            var point = addFulcrumPoint(graphics,drowing_line.x2,drowing_line.y2);
-            points.push(point);
-            //pointに入射角も入れる
-            point.inLineRads.push(Phaser.Geom.Line.Angle(drowing_line));
-            point.connect_Line.push(drowing_line);    
-        }
-        pipe_UI.data.values.pipenum -= 1;
-        pipe_UI.data.values.pipediff = 0;
-        money_UI.data.values.money -= money_UI.data.values.moneydiff;
-        money_UI.data.values.moneydiff = 0;
-
-        SE.play();
     });
 }
 
