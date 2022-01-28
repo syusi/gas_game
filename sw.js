@@ -13,6 +13,8 @@ var urlsToCache = [
   '/assets/stone.png',
   '/assets/backimage.jpeg',
   '/assets/gas_tank.png',
+  '/assets/howtoplay.png',
+  '/assets/tutorial.png',
   'gasGame.html',
   'gasGame.js',
   '/stage/stage1.json',
